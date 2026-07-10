@@ -15,8 +15,20 @@ from viewmodels.player_viewmodel import PlayerViewModel
 SEEK_STEP_MS = 5_000
 VOLUME_STEP_PERCENT = 5
 
+MEDIA_EXTENSIONS = (
+    ".mp4",
+    ".mkv",
+    ".avi",
+    ".mov",
+    ".webm",
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".m4a",
+)
 MEDIA_FILE_FILTER = (
-    "Fichiers média (*.mp4 *.mkv *.avi *.mov *.webm *.mp3 *.wav *.flac *.ogg *.m4a);;"
+    f"Fichiers média ({' '.join(f'*{ext}' for ext in MEDIA_EXTENSIONS)});;"
     "Tous les fichiers (*)"
 )
 
@@ -26,6 +38,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Lecteur Média")
         self.resize(900, 600)
+        self.setAcceptDrops(True)
 
         self.viewmodel = PlayerViewModel()
 
@@ -100,12 +113,32 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        path = Path(file_path)
-        self.viewmodel.add_to_playlist(MediaItem(file_path=path, display_name=path.name))
-        self.viewmodel.play_at(len(self.viewmodel.playlist_items) - 1)
+        self._add_files_to_playlist([Path(file_path)])
 
     def _on_playlist_changed(self) -> None:
         self.playlist_widget.set_items(self.viewmodel.playlist_items, self.viewmodel.current_index)
+
+    def _add_files_to_playlist(self, paths: list[Path]) -> None:
+        was_playing = self.viewmodel.state == PlaybackState.PLAYING
+        first_new_index = len(self.viewmodel.playlist_items)
+        for path in paths:
+            self.viewmodel.add_to_playlist(MediaItem(file_path=path, display_name=path.name))
+        if not was_playing:
+            self.viewmodel.play_at(first_new_index)
+
+    def dragEnterEvent(self, event) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        paths = [
+            Path(url.toLocalFile())
+            for url in event.mimeData().urls()
+            if url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in MEDIA_EXTENSIONS
+        ]
+        if not paths:
+            return
+        self._add_files_to_playlist(paths)
 
     def closeEvent(self, event) -> None:
         # Cf. tests/test_player_engine.py : ramener à STOPPED avant destruction,
