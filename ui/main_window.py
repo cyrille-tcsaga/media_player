@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent, Qt, QTimer
 from PyQt6.QtGui import QActionGroup, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
@@ -17,6 +17,7 @@ from core.settings_manager import DEFAULT_SETTINGS_PATH, SettingsManager
 from core.thumbnail_generator import DEFAULT_THUMBNAIL_CACHE_DIR
 from ui.controls_widget import ControlsWidget
 from ui.mini_mode_window import MiniModeWindow
+from ui.overlay_panel import OverlayPanel
 from ui.playlist_widget import PlaylistWidget
 from ui.progress_widget import ProgressWidget
 from ui.theme_manager import Theme, apply_theme, detect_system_theme
@@ -26,6 +27,9 @@ from viewmodels.player_viewmodel import PlayerViewModel
 
 SEEK_STEP_MS = 5_000
 VOLUME_STEP_PERCENT = 5
+# Délai d'inactivité avant masquage automatique du panneau overlay en plein
+# écran (décision actée en PRD V3 section 9).
+OVERLAY_INACTIVITY_MS = 5_000
 
 MEDIA_EXTENSIONS = (
     ".mp4",
@@ -71,20 +75,42 @@ class MainWindow(QMainWindow):
         self.mini_mode_window = MiniModeWindow(self.viewmodel, parent=self)
         self.mini_mode_window.closed.connect(self._exit_mini_mode)
 
+        # US-130 : progress/controls/volume/playlist regroupés dans un seul
+        # panneau, qui bascule comme un tout entre ancrage normal (bas de
+        # fenêtre) et superposition sur la vidéo en plein écran — mêmes
+        # instances de widgets, jamais dupliquées.
+        self.overlay_panel = OverlayPanel()
+        self.overlay_panel.layout_.addWidget(self.progress_widget)
+        self.overlay_panel.layout_.addWidget(self.controls_widget)
+        self.overlay_panel.layout_.addWidget(self.volume_widget)
+        self.overlay_panel.layout_.addWidget(self.playlist_widget)
+
         central = QWidget()
         layout = QVBoxLayout(central)
         layout.addWidget(self.video_widget, stretch=1)
-        layout.addWidget(self.progress_widget)
-        layout.addWidget(self.controls_widget)
-        layout.addWidget(self.volume_widget)
-        layout.addWidget(self.playlist_widget)
+        layout.addWidget(self.overlay_panel)
         self.setCentralWidget(central)
         self._central_layout = layout
-        # US-130 : position d'origine de controls_widget dans le layout, pour
-        # l'y réinsérer telle quelle à la sortie du plein écran (ancré en bas,
-        # sans redémarrage ni réinitialisation d'état — même instance de
-        # widget, juste reparentée).
-        self._controls_dock_index = layout.indexOf(self.controls_widget)
+        # Position d'origine du panneau dans le layout, pour l'y réinsérer
+        # telle quelle à la sortie du plein écran (ancré en bas, sans
+        # redémarrage ni réinitialisation d'état — même instances de widgets,
+        # juste reparentées).
+        self._overlay_panel_dock_index = layout.indexOf(self.overlay_panel)
+
+        # US-131 : masquage automatique par inactivité en plein écran.
+        self._inactivity_timer = QTimer(self)
+        self._inactivity_timer.setSingleShot(True)
+        self._inactivity_timer.setInterval(OVERLAY_INACTIVITY_MS)
+        self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
+        self._overlay_hover_suspended = False
+        self.overlay_panel.mouse_entered.connect(self._on_overlay_hover_entered)
+        self.overlay_panel.mouse_left.connect(self._on_overlay_hover_left)
+        self.viewmodel.state_changed.connect(self._on_state_changed_for_overlay)
+        # Filtre global (plutôt que sur un widget précis) : le panneau overlay
+        # et la vidéo se partagent la fenêtre, un mouvement de souris doit être
+        # détecté quel que soit le widget survolé. Qt retire automatiquement ce
+        # filtre à la destruction de self.
+        QApplication.instance().installEventFilter(self)
 
         self.controls_widget.play_requested.connect(self.viewmodel.play)
         self.controls_widget.pause_requested.connect(self.viewmodel.pause)
@@ -202,6 +228,8 @@ class MainWindow(QMainWindow):
         if obj is self.video_widget and event.type() == QEvent.Type.MouseButtonDblClick:
             self._toggle_fullscreen()
             return True
+        if event.type() == QEvent.Type.MouseMove and self.isFullScreen():
+            self._on_fullscreen_mouse_moved()
         return super().eventFilter(obj, event)
 
     def _toggle_fullscreen(self) -> None:
@@ -219,30 +247,80 @@ class MainWindow(QMainWindow):
 
     def _enter_fullscreen(self) -> None:
         self.showFullScreen()
-        self._move_controls_to_overlay()
+        self._move_overlay_panel_to_video()
+        # Apparition immédiate à l'entrée en plein écran (US-131), puis
+        # démarrage du minuteur d'inactivité (sauf lecture non active).
+        self.overlay_panel.show()
+        self._reset_inactivity_timer()
 
     def _exit_fullscreen(self) -> None:
         if self.isFullScreen():
             self.showNormal()
-            self._restore_controls_to_docked_position()
+            self._inactivity_timer.stop()
+            self._restore_overlay_panel_to_docked_position()
 
-    def _move_controls_to_overlay(self) -> None:
-        # US-130 : réutilise l'instance existante de controls_widget plutôt
-        # que d'en créer une seconde pour le mode plein écran — seuls le
-        # parent et le style QSS changent, la logique/les signaux restent
+    def _move_overlay_panel_to_video(self) -> None:
+        # Réutilise l'instance existante du panneau plutôt que d'en créer une
+        # seconde pour le mode plein écran — seuls le parent et le style QSS
+        # changent, la logique/les signaux des widgets qu'il contient restent
         # identiques.
-        self._central_layout.removeWidget(self.controls_widget)
-        self.controls_widget.setParent(self.video_widget)
-        self.controls_widget.set_overlay_mode(True)
-        self.controls_widget.show()
-        self.video_widget.set_overlay_controls(self.controls_widget)
+        self._central_layout.removeWidget(self.overlay_panel)
+        self.overlay_panel.setParent(self.video_widget)
+        self.overlay_panel.set_overlay_mode(True)
+        self.video_widget.set_overlay_panel(self.overlay_panel)
 
-    def _restore_controls_to_docked_position(self) -> None:
-        self.video_widget.set_overlay_controls(None)
-        self.controls_widget.set_overlay_mode(False)
-        self.controls_widget.setParent(None)
-        self._central_layout.insertWidget(self._controls_dock_index, self.controls_widget)
-        self.controls_widget.show()
+    def _restore_overlay_panel_to_docked_position(self) -> None:
+        self.video_widget.set_overlay_panel(None)
+        self.overlay_panel.set_overlay_mode(False)
+        self.overlay_panel.setParent(None)
+        self._central_layout.insertWidget(self._overlay_panel_dock_index, self.overlay_panel)
+        self.overlay_panel.show()
+
+    def _on_fullscreen_mouse_moved(self) -> None:
+        if self._overlay_hover_suspended:
+            return
+        self.overlay_panel.show()
+        self._reset_inactivity_timer()
+
+    def _on_overlay_hover_entered(self) -> None:
+        # Survol direct du panneau : suspend le minuteur tant que la souris ne
+        # l'a pas quitté (US-131), indépendamment de l'état de lecture.
+        self._overlay_hover_suspended = True
+        self._inactivity_timer.stop()
+        self.overlay_panel.show()
+
+    def _on_overlay_hover_left(self) -> None:
+        self._overlay_hover_suspended = False
+        self._reset_inactivity_timer()
+
+    def _on_state_changed_for_overlay(self, state: PlaybackState) -> None:
+        if not self.isFullScreen():
+            return
+        if state != PlaybackState.PLAYING:
+            # En pause (ou arrêt) : les contrôles n'ont pas de raison de se
+            # masquer (US-131 mentionne explicitement la pause ; la même
+            # logique s'applique à STOPPED/ERROR par cohérence — un minuteur
+            # qui masquerait les contrôles sans lecture active n'aurait pas
+            # de sens pour l'utilisateur).
+            self._inactivity_timer.stop()
+            self.overlay_panel.show()
+        elif not self._overlay_hover_suspended:
+            self._reset_inactivity_timer()
+
+    def _reset_inactivity_timer(self) -> None:
+        if self.viewmodel.state != PlaybackState.PLAYING:
+            self._inactivity_timer.stop()
+            return
+        self._inactivity_timer.start()
+
+    def _on_inactivity_timeout(self) -> None:
+        # Garde défensive plutôt que de compter uniquement sur la discipline
+        # de démarrage/arrêt du minuteur ailleurs (_reset_inactivity_timer,
+        # _on_state_changed_for_overlay) : un signal timeout() déjà mis en
+        # file au moment précis d'une pause resterait sinon possible.
+        if self.viewmodel.state != PlaybackState.PLAYING:
+            return
+        self.overlay_panel.hide()
 
     def _enter_mini_mode(self) -> None:
         # Décision explicite (résout le TODO(US-101) laissé par US-082) : le

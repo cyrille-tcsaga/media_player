@@ -374,7 +374,7 @@ def test_startup_restores_previously_saved_volume(qapp, qtbot, tmp_path):
     assert window.viewmodel.volume == 37
 
 
-def test_entering_fullscreen_moves_controls_to_video_overlay(qapp, qtbot, tmp_path):
+def test_entering_fullscreen_moves_overlay_panel_to_video(qapp, qtbot, tmp_path):
     window = MainWindow(
         playlist_path=tmp_path / "playlist.json",
         settings_path=tmp_path / "settings.json",
@@ -385,12 +385,17 @@ def test_entering_fullscreen_moves_controls_to_video_overlay(qapp, qtbot, tmp_pa
 
     window._toggle_fullscreen()
 
-    assert window.controls_widget.parentWidget() is window.video_widget
-    assert window.controls_widget.property("overlayMode") is True
-    assert window._central_layout.indexOf(window.controls_widget) == -1
+    assert window.overlay_panel.parentWidget() is window.video_widget
+    assert window.overlay_panel.property("overlayMode") is True
+    assert window._central_layout.indexOf(window.overlay_panel) == -1
+    # Les widgets groupés dans le panneau voyagent avec lui, pas dupliqués.
+    assert window.controls_widget.parentWidget() is window.overlay_panel
+    assert window.progress_widget.parentWidget() is window.overlay_panel
+    assert window.volume_widget.parentWidget() is window.overlay_panel
+    assert window.playlist_widget.parentWidget() is window.overlay_panel
 
 
-def test_exiting_fullscreen_restores_controls_to_docked_position(qapp, qtbot, tmp_path):
+def test_exiting_fullscreen_restores_overlay_panel_to_docked_position(qapp, qtbot, tmp_path):
     window = MainWindow(
         playlist_path=tmp_path / "playlist.json",
         settings_path=tmp_path / "settings.json",
@@ -402,15 +407,17 @@ def test_exiting_fullscreen_restores_controls_to_docked_position(qapp, qtbot, tm
     window._toggle_fullscreen()
     window._toggle_fullscreen()
 
-    assert window._central_layout.indexOf(window.controls_widget) == window._controls_dock_index
-    assert window.controls_widget.property("overlayMode") is False
-    # Même instance, toujours fonctionnelle : les signaux existants restent
+    assert (
+        window._central_layout.indexOf(window.overlay_panel) == window._overlay_panel_dock_index
+    )
+    assert window.overlay_panel.property("overlayMode") is False
+    # Mêmes instances, toujours fonctionnelles : les signaux existants restent
     # câblés sans avoir besoin de reconnexion.
     with qtbot.waitSignal(window.controls_widget.play_requested, timeout=1000):
         window.controls_widget.play_button.click()
 
 
-def test_escape_while_fullscreen_also_restores_controls(qapp, qtbot, tmp_path):
+def test_escape_while_fullscreen_also_restores_overlay_panel(qapp, qtbot, tmp_path):
     window = MainWindow(
         playlist_path=tmp_path / "playlist.json",
         settings_path=tmp_path / "settings.json",
@@ -422,5 +429,114 @@ def test_escape_while_fullscreen_also_restores_controls(qapp, qtbot, tmp_path):
 
     window._exit_fullscreen()
 
-    assert window._central_layout.indexOf(window.controls_widget) == window._controls_dock_index
-    assert window.controls_widget.property("overlayMode") is False
+    assert (
+        window._central_layout.indexOf(window.overlay_panel) == window._overlay_panel_dock_index
+    )
+    assert window.overlay_panel.property("overlayMode") is False
+
+
+def test_entering_fullscreen_shows_overlay_panel_immediately(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+
+    window._toggle_fullscreen()
+
+    assert window.overlay_panel.isVisible()
+
+
+def test_inactivity_timeout_hides_overlay_panel_while_playing(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        window.viewmodel.play()
+    window._toggle_fullscreen()
+
+    window._on_inactivity_timeout()
+
+    assert not window.overlay_panel.isVisible()
+
+    window.viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_mouse_move_while_fullscreen_reshows_hidden_overlay_panel(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        window.viewmodel.play()
+    window._toggle_fullscreen()
+    window._on_inactivity_timeout()
+    assert not window.overlay_panel.isVisible()
+
+    window._on_fullscreen_mouse_moved()
+
+    assert window.overlay_panel.isVisible()
+
+    window.viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_overlay_panel_stays_visible_while_paused(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        window.viewmodel.play()
+    window._toggle_fullscreen()
+
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        window.viewmodel.pause()
+
+    # Le minuteur ne doit plus pouvoir masquer le panneau tant que la lecture
+    # n'a pas repris.
+    window._on_inactivity_timeout()
+    assert window.overlay_panel.isVisible()
+    assert not window._inactivity_timer.isActive()
+
+
+def test_hovering_overlay_panel_suspends_inactivity_timer(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        window.viewmodel.play()
+    window._toggle_fullscreen()
+
+    window._on_overlay_hover_entered()
+    assert not window._inactivity_timer.isActive()
+
+    # Le survol suspend le minuteur : un timeout ne devrait normalement pas
+    # être déclenché pendant ce temps, mais on vérifie directement l'état
+    # plutôt que d'attendre les 5 secondes réelles.
+    window._on_overlay_hover_left()
+    assert window._inactivity_timer.isActive()
+
+    window.viewmodel.stop()
+    qtbot.wait(200)

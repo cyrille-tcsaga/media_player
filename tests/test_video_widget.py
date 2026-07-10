@@ -24,50 +24,52 @@ def test_resizing_video_widget_repositions_subtitle_overlay(qapp, qtbot):
     assert widget.subtitle_overlay.y() != initial_y
 
 
-def test_set_overlay_controls_centers_widget_over_video(qapp, qtbot):
+def test_set_overlay_panel_anchors_full_width_at_bottom(qapp, qtbot):
     widget = VideoWidget()
     qtbot.addWidget(widget)
     widget.show()
     widget.resize(400, 300)
 
-    controls = QPushButton("Controls")
-    widget.set_overlay_controls(controls)
+    panel = QPushButton("Panel")
+    widget.set_overlay_panel(panel)
 
-    expected_x = (widget.width() - controls.width()) // 2
-    expected_y = (widget.height() - controls.height()) // 2
-    assert controls.x() == max(0, expected_x)
-    assert controls.y() == max(0, expected_y)
+    assert panel.x() == 0
+    assert panel.width() == widget.width()
+    assert panel.y() + panel.height() == widget.height()
+    assert panel.height() <= widget.height()
 
 
-def test_resizing_video_widget_repositions_overlay_controls(qapp, qtbot):
+def test_resizing_video_widget_repositions_overlay_panel(qapp, qtbot):
     widget = VideoWidget()
     qtbot.addWidget(widget)
     widget.show()
     widget.resize(400, 300)
 
-    controls = QPushButton("Controls")
-    widget.set_overlay_controls(controls)
-    initial_position = (controls.x(), controls.y())
+    panel = QPushButton("Panel")
+    widget.set_overlay_panel(panel)
+    initial_position = (panel.x(), panel.y(), panel.width(), panel.height())
 
     widget.resize(800, 600)
     qapp.processEvents()
 
-    assert (controls.x(), controls.y()) != initial_position
+    assert (panel.x(), panel.y(), panel.width(), panel.height()) != initial_position
+    assert panel.width() == widget.width()
+    assert panel.y() + panel.height() == widget.height()
 
 
-def test_set_overlay_controls_none_stops_repositioning(qapp, qtbot):
+def test_set_overlay_panel_none_stops_repositioning(qapp, qtbot):
     widget = VideoWidget()
     qtbot.addWidget(widget)
     widget.show()
     widget.resize(400, 300)
 
-    controls = QPushButton("Controls")
-    widget.set_overlay_controls(controls)
-    widget.set_overlay_controls(None)
-    position_before_resize = (controls.x(), controls.y())
+    panel = QPushButton("Panel")
+    widget.set_overlay_panel(panel)
+    widget.set_overlay_panel(None)
+    position_before_resize = (panel.x(), panel.y(), panel.width(), panel.height())
 
     widget.resize(800, 600)
     qapp.processEvents()
 
     # Plus de référence à ce widget : aucun repositionnement automatique.
-    assert (controls.x(), controls.y()) == position_before_resize
+    assert (panel.x(), panel.y(), panel.width(), panel.height()) == position_before_resize
