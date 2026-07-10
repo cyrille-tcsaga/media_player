@@ -64,7 +64,7 @@ def try_play(app: QCoreApplication, media_path: str, label: str) -> str:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python spike/audio_spike.py chemin/vers/fichier.mp3 [chemin/vers/fichier_h265.mkv]")
+        print("Usage: python spike/audio_spike.py fichier.mp3 [fichier_h265.mkv]")
         sys.exit(1)
 
     mp3_path = sys.argv[1]
