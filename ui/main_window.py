@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
@@ -56,6 +56,7 @@ class MainWindow(QMainWindow):
         self.volume_widget = VolumeWidget()
         self.playlist_widget = PlaylistWidget()
         self.viewmodel.set_video_output(self.video_widget)
+        self.video_widget.installEventFilter(self)
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -112,6 +113,7 @@ class MainWindow(QMainWindow):
         QShortcut(
             QKeySequence(Qt.Key.Key_Down), self, lambda: self._change_volume(-VOLUME_STEP_PERCENT)
         )
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self._exit_fullscreen)
 
     def _toggle_play_pause(self) -> None:
         if self.viewmodel.state == PlaybackState.PLAYING:
@@ -127,6 +129,23 @@ class MainWindow(QMainWindow):
     def _change_volume(self, offset_percent: int) -> None:
         new_volume = max(0, min(100, self.volume_widget.slider.value() + offset_percent))
         self.volume_widget.slider.setValue(new_volume)
+
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self.video_widget and event.type() == QEvent.Type.MouseButtonDblClick:
+            self._toggle_fullscreen()
+            return True
+        return super().eventFilter(obj, event)
+
+    def _toggle_fullscreen(self) -> None:
+        # TODO(US-101): define fullscreen behaviour when mini-mode is active
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def _exit_fullscreen(self) -> None:
+        if self.isFullScreen():
+            self.showNormal()
 
     def _open_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(

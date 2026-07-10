@@ -127,3 +127,37 @@ def test_adding_a_file_persists_playlist_to_disk(qapp, qtbot, tmp_path):
 
     window.viewmodel.stop()
     qtbot.wait(200)
+
+
+def test_double_click_on_video_widget_toggles_fullscreen(qapp, qtbot, tmp_path):
+    window = MainWindow(playlist_path=tmp_path / "playlist.json")
+    qtbot.addWidget(window)
+    window.show()
+
+    qtbot.mouseDClick(window.video_widget, Qt.MouseButton.LeftButton)
+    assert window.isFullScreen()
+
+    qtbot.mouseDClick(window.video_widget, Qt.MouseButton.LeftButton)
+    assert not window.isFullScreen()
+
+
+def test_exit_fullscreen_returns_to_normal_when_active(qapp, qtbot, tmp_path):
+    window = MainWindow(playlist_path=tmp_path / "playlist.json")
+    qtbot.addWidget(window)
+    window.show()
+    window.showFullScreen()
+    assert window.isFullScreen()
+
+    window._exit_fullscreen()
+
+    assert not window.isFullScreen()
+
+
+def test_exit_fullscreen_is_noop_when_not_fullscreen(qapp, qtbot, tmp_path):
+    window = MainWindow(playlist_path=tmp_path / "playlist.json")
+    qtbot.addWidget(window)
+    window.show()
+
+    window._exit_fullscreen()
+
+    assert not window.isFullScreen()
