@@ -17,6 +17,7 @@
 **En tant que** développeur, **je veux** une classe gérant la sérialisation/désérialisation de la playlist vers un fichier JSON dédié, **afin de** permettre à l'utilisateur de retrouver sa playlist après redémarrage (F12 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `core/playlist_persistence.py` définit des fonctions `save_playlist(items: list[MediaItem], path: Path)` et `load_playlist(path: Path) -> list[MediaItem]`
 - Le fichier cible est `playlist.json`, distinct de tout futur fichier de préférences (décision actée en PRD V2 section 9)
 - `load_playlist()` filtre silencieusement les entrées dont `file_path` n'existe plus sur disque (`Path.exists()`), sans lever d'exception
@@ -35,8 +36,9 @@
 **En tant qu'**utilisateur, **je veux** que ma playlist se sauvegarde automatiquement et se recharge au lancement, **afin de** ne pas avoir à reconstituer ma liste de lecture à chaque session.
 
 **Critères d'acceptation :**
+
 - `PlaylistManager` (ou le `PlayerViewModel`) déclenche `save_playlist()` après chaque `add()`/`remove()`, pas uniquement à la fermeture de l'application
-- `main.py` (ou l'initialisation de `MainWindow`) appelle `load_playlist()` au démarrage et peuple la playlist en conséquence
+- `main.py` (ou l'initialisatio n de `MainWindow`) appelle `load_playlist()` au démarrage et peuple la playlist en conséquence
 - Si un ou plusieurs fichiers ont été filtrés silencieusement (déplacés/supprimés depuis la dernière session), un message discret (pas une boîte de dialogue bloquante) informe l'utilisateur du nombre de fichiers manquants
 
 **Fichiers concernés :** `core/playlist_manager.py`, `viewmodels/player_viewmodel.py`, `ui/main_window.py`
@@ -54,6 +56,7 @@
 **En tant que** développeur, **je veux** un mécanisme générique de sauvegarde des préférences utilisateur, **afin de** disposer d'un socle réutilisable par F15 (thème) et par les fonctionnalités futures nécessitant de la persistance de réglages.
 
 **Critères d'acceptation :**
+
 - `core/settings_manager.py` définit une classe ou des fonctions permettant de lire/écrire des paires clé-valeur simples vers `settings.json` (fichier distinct de `playlist.json`, décision actée en PRD V2 section 9)
 - Valeurs par défaut sensées si `settings.json` n'existe pas encore (premier lancement)
 - Un test `tests/test_settings_manager.py` couvre : écriture puis lecture identique, fichier absent (valeurs par défaut), fichier corrompu (valeurs par défaut sans crash)
@@ -71,6 +74,7 @@
 **En tant qu'**utilisateur, **je veux** ajuster la vitesse de lecture entre 0.5x et 2x, **afin de** accélérer ou ralentir la lecture selon mes besoins (F18 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `core/player_engine.py` gagne une méthode `set_playback_rate(rate: float)` déléguant à `QMediaPlayer.setPlaybackRate()`, avec validation de la plage (0.5 à 2.0 ; valeur hors plage rejetée ou clampée, comportement à choisir et documenter)
 - Un contrôle UI (menu déroulant ou slider discret avec paliers, ex. 0.5x/0.75x/1x/1.25x/1.5x/2x) déclenche ce changement via le ViewModel
 - Un test `tests/test_player_engine.py` (étendu) vérifie que `set_playback_rate()` avec une valeur valide met bien à jour l'état interne, et qu'une valeur hors plage est gérée sans exception
@@ -88,6 +92,7 @@
 **En tant qu'**utilisateur, **je veux** basculer la fenêtre en plein écran via double-clic sur la vidéo ou raccourci clavier, **afin de** profiter d'une expérience de visionnage immersive (F20 du PRD V2).
 
 **Critères d'acceptation :**
+
 - Double-clic sur `QVideoWidget` bascule `MainWindow` entre `showFullScreen()` et `showNormal()`
 - `Échap` sort du plein écran s'il est actif
 - Scope volontairement minimal (décision actée en PRD V2 section 3.9) : pas de masquage automatique des contrôles après inactivité de la souris dans cette story — les contrôles restent visibles en plein écran pour le MVP V2
@@ -106,6 +111,7 @@
 **En tant qu'**utilisateur, **je veux** basculer entre un thème sombre et un thème clair, avec mon choix mémorisé, **afin de** personnaliser l'apparence de l'application (F15 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `ui/theme_manager.py` applique une feuille de style Qt (QSS) selon le thème sélectionné (au minimum deux feuilles de style : `dark.qss`, `light.qss`, stockées dans `ui/resources/` ou équivalent)
 - Un menu ou bouton bascule entre les deux thèmes
 - Le choix est sauvegardé via `settings_manager.py` (US-080) et restauré au démarrage
@@ -126,6 +132,7 @@
 **En tant que** développeur, **je veux** une énumération représentant les modes de répétition, **afin de** disposer du vocabulaire nécessaire avant de modifier `PlaylistManager`.
 
 **Critères d'acceptation :**
+
 - `core/models.py` gagne une énumération `RepeatMode` avec au minimum : `NONE`, `TRACK`, `PLAYLIST`
 - Aucune classe existante n'est modifiée dans cette story — uniquement un ajout
 - Le test V1 existant `tests/test_models.py` passe toujours sans modification
@@ -143,6 +150,7 @@
 **En tant qu'**utilisateur, **je veux** pouvoir répéter une piste ou toute la playlist, **afin de** ne pas avoir à relancer manuellement la lecture (F13 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `PlaylistManager.__init__` gagne un paramètre `repeat_mode: RepeatMode = RepeatMode.NONE` (valeur par défaut = comportement V1 actuel, non négociable)
 - Avec `repeat_mode = RepeatMode.NONE` : comportement strictement identique à V1 (blocage en fin de liste)
 - Avec `repeat_mode = RepeatMode.TRACK` : `next()` recharge le même élément au lieu d'avancer
@@ -164,6 +172,7 @@
 **En tant qu'**utilisateur, **je veux** lire la playlist dans un ordre aléatoire, **afin de** varier l'écoute sans réorganiser manuellement mes fichiers (F14 du PRD V2).
 
 **Critères d'acceptation :**
+
 - Un nouvel ordre aléatoire (algorithme de Fisher-Yates recommandé) est calculé une seule fois à l'activation du mode shuffle, pas recalculé à chaque appel de `next()`
 - Chaque piste de la playlist n'est jouée qu'une seule fois avant qu'un nouveau cycle aléatoire ne recommence (pas de répétition rapprochée type shuffle naïf)
 - Le mode shuffle est compatible avec `repeat_mode` (ex. shuffle + `RepeatMode.PLAYLIST` = nouveau tirage aléatoire à chaque boucle complète)
@@ -185,6 +194,7 @@
 **En tant qu'**utilisateur, **je veux** une fenêtre compacte affichant uniquement la vidéo et des contrôles minimalistes, **afin de** regarder du contenu en arrière-plan pendant que je travaille sur autre chose (F19 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `ui/mini_mode_window.py` définit une classe `MiniModeWindow(QWidget)` avec : zone vidéo, boutons play/pause, bouton de fermeture/retour au mode normal
 - La fenêtre a l'attribut always-on-top (`Qt.WindowType.WindowStaysOnTopHint`)
 - `MiniModeWindow` s'abonne au **même** `PlayerViewModel` que `MainWindow` — aucune nouvelle instance de `PlayerEngine` n'est créée
@@ -203,6 +213,7 @@
 **En tant qu'**utilisateur, **je veux** que les actions dans un mode se reflètent immédiatement dans l'autre, **afin de** ne jamais avoir un état de lecture incohérent entre les deux fenêtres.
 
 **Critères d'acceptation :**
+
 - Play/pause depuis `MiniModeWindow` met à jour l'état visible si l'utilisateur revient à `MainWindow`, et vice-versa
 - La position de lecture, le volume, et le média en cours restent cohérents entre les deux vues à tout moment
 - Le comportement du plein écran (US-082) vis-à-vis du mini-mode est maintenant tranché ici (résolution du TODO laissé en US-082) : décision à documenter explicitement en commentaire dans le code
@@ -223,6 +234,7 @@
 **En tant que** développeur, **je veux** que le binaire `ffmpeg` soit inclus dans l'exécutable packagé, **afin de** permettre la génération de miniatures sans dépendance système externe non documentée (conséquence de la décision actée en PRD V2 section 9 point 2).
 
 **Critères d'acceptation :**
+
 - Le fichier de spec PyInstaller (`media_player.spec`, créé en V1 US-060) est étendu pour inclure le binaire `ffmpeg` (via `binaries=[...]` dans la spec)
 - Après packaging, l'exécutable `.app` contient bien le binaire `ffmpeg` dans son bundle (vérifiable via inspection du contenu du `.app`, ex. `find MediaPlayer.app -name ffmpeg`)
 - Un appel à `ffmpeg` depuis l'application packagée fonctionne sur une machine sans `ffmpeg` installé système (si possible à vérifier ; sinon documenter la limite de vérification, cohérent avec la note de US-060 en V1)
@@ -241,6 +253,7 @@
 **En tant que** développeur, **je veux** une classe extrayant une frame représentative d'un fichier vidéo via `ffmpeg` en sous-processus, **afin de** fournir des miniatures pour la playlist (F16 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `core/thumbnail_generator.py` définit une fonction ou classe `generate_thumbnail(media_item: MediaItem, cache_dir: Path) -> Path | None`
 - L'extraction utilise `subprocess.run()` avec un timeout explicite (ex. 10 secondes) pour éviter un blocage indéfini sur un fichier problématique
 - La frame est extraite à une position relative de la durée (ex. 10%), pas à la position 0 (souvent un écran noir en début de vidéo)
@@ -261,6 +274,7 @@
 **En tant qu'**utilisateur, **je veux** voir un aperçu visuel de chaque vidéo dans ma playlist, **afin de** identifier plus rapidement mes fichiers.
 
 **Critères d'acceptation :**
+
 - `ui/playlist_widget.py` affiche la miniature générée (US-111) à côté de `display_name` pour chaque élément vidéo
 - Pendant la génération (potentiellement asynchrone, cf. exigence non fonctionnelle du PRD V2 section 5), une icône de chargement ou un placeholder neutre s'affiche à la place
 - Si `generate_thumbnail()` retourne `None`, une icône générique (ex. icône de fichier vidéo générique) s'affiche sans erreur visible pour l'utilisateur
@@ -279,6 +293,7 @@
 **En tant que** développeur, **je veux** vérifier que la génération de miniatures reste stable sur un grand nombre de fichiers, **afin de** m'assurer que le choix architectural de F16 (sous-processus `ffmpeg`) tient la charge avant de considérer la fonctionnalité terminée.
 
 **Critères d'acceptation :**
+
 - Un test (manuel ou automatisé) génère des miniatures pour une playlist d'au moins 20 fichiers vidéo différents (formats variés si possible : MP4, MKV, WebM)
 - Aucun processus `ffmpeg` zombie ne reste actif après la génération complète (vérifiable via `ps aux | grep ffmpeg` après exécution)
 - Le temps cumulé de génération pour 20 fichiers reste dans un ordre de grandeur raisonnable (à documenter avec une valeur mesurée réelle, pas une estimation)
@@ -299,6 +314,7 @@
 **En tant que** développeur, **je veux** une fonction parsant un fichier `.srt` en une structure de données exploitable, **afin de** préparer l'affichage synchronisé des sous-titres (F17 du PRD V2).
 
 **Critères d'acceptation :**
+
 - `core/subtitle_parser.py` définit une fonction `parse_srt(path: Path) -> list[SubtitleEntry]`, avec `SubtitleEntry` une dataclass dans `core/models.py` (`start_ms: int`, `end_ms: int`, `text: str`)
 - Le parseur gère les deux encodages les plus courants (UTF-8, Latin-1/Windows-1252), avec détection ou repli automatique
 - Un fichier `.srt` malformé (syntaxe invalide, timecodes incohérents) ne lève pas d'exception non gérée — retourne une liste vide ou partielle avec le contenu valide récupérable
@@ -317,6 +333,7 @@
 **En tant que** développeur, **je veux** un widget affichant du texte en surimpression sur la vidéo, **afin de** disposer du composant visuel nécessaire à l'affichage des sous-titres.
 
 **Critères d'acceptation :**
+
 - `ui/subtitle_overlay.py` définit un `QLabel` (ou widget équivalent) positionné en surimpression sur `QVideoWidget`, dans le tiers inférieur de la zone vidéo
 - Le texte est lisible sur fond vidéo variable (fond semi-transparent derrière le texte, ou contour/ombre portée sur le texte)
 - Le widget expose une méthode `set_text(text: str)` et `clear()`
@@ -335,6 +352,7 @@
 **En tant qu'**utilisateur, **je veux** charger un fichier `.srt` et voir les sous-titres s'afficher synchronisés avec la vidéo, **afin de** suivre du contenu dans une langue que je ne maîtrise pas parfaitement.
 
 **Critères d'acceptation :**
+
 - Un menu ou bouton "Charger les sous-titres" ouvre un dialogue de sélection de fichier `.srt`
 - `PlayerViewModel` écoute `positionChanged` et détermine l'entrée `SubtitleEntry` correspondante (si `start_ms <= position <= end_ms` pour une entrée), avec une tolérance de synchronisation de quelques centaines de ms
 - `SubtitleOverlay.set_text()` est appelé quand l'entrée active change, `clear()` quand aucune entrée n'est active
@@ -348,6 +366,7 @@
 **Notes pour Claude Code :** dernière story du plan V2 — une fois complétée, comparer explicitement l'état du projet aux 10 critères d'acceptation de la V2 listés en section 7 du PRD V2, un par un, avant de considérer la V2 "terminée". Vérifier également qu'aucun `TODO` résiduel (ex. celui d'US-082) n'a été oublié en cours de route.
 
 ---
+
 ---
 
 # User Stories V2 (English) — Audio/Video Player, PyQt6 + QtMultimedia
@@ -369,6 +388,7 @@
 **As a** developer, **I want** a class handling serialisation/deserialisation of the playlist to/from a dedicated JSON file, **so that** the user can retrieve their playlist after restarting the application (PRD V2 F12).
 
 **Acceptance criteria:**
+
 - `core/playlist_persistence.py` defines `save_playlist(items: list[MediaItem], path: Path)` and `load_playlist(path: Path) -> list[MediaItem]` functions
 - The target file is `playlist.json`, kept separate from any future preferences file (decision made in PRD V2 section 9)
 - `load_playlist()` silently filters out entries whose `file_path` no longer exists on disk (`Path.exists()`), without raising an exception
@@ -387,6 +407,7 @@
 **As a** user, **I want** my playlist to save automatically and reload on launch, **so that** I do not have to rebuild my playlist every session.
 
 **Acceptance criteria:**
+
 - `PlaylistManager` (or `PlayerViewModel`) triggers `save_playlist()` after every `add()`/`remove()`, not only on application exit
 - `main.py` (or `MainWindow`'s initialisation) calls `load_playlist()` at startup and populates the playlist accordingly
 - If one or more files were silently filtered out (moved/deleted since the last session), a discreet message (not a blocking dialog) informs the user of the number of missing files
@@ -406,6 +427,7 @@
 **As a** developer, **I want** a generic mechanism for saving user preferences, **so that** F15 (theme) and any future settings-dependent features have a reusable foundation.
 
 **Acceptance criteria:**
+
 - `core/settings_manager.py` defines a class or functions to read/write simple key-value pairs to `settings.json` (a file separate from `playlist.json`, decision made in PRD V2 section 9)
 - Sensible default values apply if `settings.json` does not yet exist (first launch)
 - A `tests/test_settings_manager.py` test covers: write then read producing identical results, a missing file (defaults), a corrupted file (defaults, no crash)
@@ -423,6 +445,7 @@
 **As a** user, **I want** to adjust playback speed between 0.5x and 2x, **so that** I can speed up or slow down playback as needed (PRD V2 F18).
 
 **Acceptance criteria:**
+
 - `core/player_engine.py` gains a `set_playback_rate(rate: float)` method delegating to `QMediaPlayer.setPlaybackRate()`, with range validation (0.5 to 2.0; out-of-range values are either rejected or clamped — behaviour to be chosen and documented)
 - A UI control (a dropdown, or a stepped slider, e.g. 0.5x/0.75x/1x/1.25x/1.5x/2x) triggers this change via the ViewModel
 - A `tests/test_player_engine.py` test (extended) verifies that `set_playback_rate()` with a valid value correctly updates the internal state, and that an out-of-range value is handled without an exception
@@ -440,6 +463,7 @@
 **As a** user, **I want** to switch the window to fullscreen via a double-click on the video or a keyboard shortcut, **so that** I get an immersive viewing experience (PRD V2 F20).
 
 **Acceptance criteria:**
+
 - Double-clicking `QVideoWidget` toggles `MainWindow` between `showFullScreen()` and `showNormal()`
 - `Escape` exits fullscreen if active
 - Deliberately minimal scope (decision made in PRD V2 section 3.9): no automatic control-hiding after mouse inactivity in this story — controls remain visible in fullscreen for the V2 MVP
@@ -458,6 +482,7 @@
 **As a** user, **I want** to switch between a dark and a light theme, with my choice remembered, **so that** I can personalise the application's appearance (PRD V2 F15).
 
 **Acceptance criteria:**
+
 - `ui/theme_manager.py` applies a Qt stylesheet (QSS) according to the selected theme (at least two stylesheets: `dark.qss`, `light.qss`, stored under `ui/resources/` or equivalent)
 - A menu or button toggles between the two themes
 - The choice is saved via `settings_manager.py` (US-080) and restored on startup
@@ -478,6 +503,7 @@
 **As a** developer, **I want** an enum representing the repeat modes, **so that** the vocabulary is in place before modifying `PlaylistManager`.
 
 **Acceptance criteria:**
+
 - `core/models.py` gains a `RepeatMode` enum with at least: `NONE`, `TRACK`, `PLAYLIST`
 - No existing class is modified in this story — addition only
 - The existing V1 test `tests/test_models.py` still passes unmodified
@@ -495,6 +521,7 @@
 **As a** user, **I want** to be able to repeat a track or the whole playlist, **so that** I do not have to manually restart playback (PRD V2 F13).
 
 **Acceptance criteria:**
+
 - `PlaylistManager.__init__` gains a `repeat_mode: RepeatMode = RepeatMode.NONE` parameter (default value = current V1 behaviour, non-negotiable)
 - With `repeat_mode = RepeatMode.NONE`: behaviour strictly identical to V1 (stops at the end of the list)
 - With `repeat_mode = RepeatMode.TRACK`: `next()` reloads the same item instead of advancing
@@ -516,6 +543,7 @@
 **As a** user, **I want** to play the playlist in random order, **so that** I can vary my listening without manually reorganising my files (PRD V2 F14).
 
 **Acceptance criteria:**
+
 - A new random order (Fisher–Yates shuffle recommended) is computed once when shuffle mode is activated, not recomputed on every `next()` call
 - Each track in the playlist plays exactly once before a new random cycle begins (no naive-shuffle close repeats)
 - Shuffle mode is compatible with `repeat_mode` (e.g. shuffle + `RepeatMode.PLAYLIST` = a fresh random draw on every full loop)
@@ -537,6 +565,7 @@
 **As a** user, **I want** a compact window showing only the video and minimal controls, **so that** I can watch content in the background while working on something else (PRD V2 F19).
 
 **Acceptance criteria:**
+
 - `ui/mini_mode_window.py` defines a `MiniModeWindow(QWidget)` class with: a video area, play/pause buttons, a close/return-to-normal-mode button
 - The window has the always-on-top attribute (`Qt.WindowType.WindowStaysOnTopHint`)
 - `MiniModeWindow` subscribes to the **same** `PlayerViewModel` as `MainWindow` — no new `PlayerEngine` instance is created
@@ -555,6 +584,7 @@
 **As a** user, **I want** actions in one mode to be reflected immediately in the other, **so that** I never see an inconsistent playback state between the two windows.
 
 **Acceptance criteria:**
+
 - Play/pause from `MiniModeWindow` updates the visible state when returning to `MainWindow`, and vice versa
 - Playback position, volume, and the current media item remain consistent between both views at all times
 - Fullscreen's (US-082) behaviour with respect to mini-mode is now settled here (resolving the TODO left in US-082): the decision must be documented explicitly as a code comment
@@ -575,6 +605,7 @@
 **As a** developer, **I want** the `ffmpeg` binary bundled into the packaged executable, **so that** thumbnail generation works without an undocumented external system dependency (a consequence of the decision made in PRD V2 section 9, point 2).
 
 **Acceptance criteria:**
+
 - The PyInstaller spec file (`media_player.spec`, created in V1 US-060) is extended to include the `ffmpeg` binary (via `binaries=[...]` in the spec)
 - After packaging, the `.app` executable actually contains the `ffmpeg` binary in its bundle (verifiable by inspecting the `.app`'s contents, e.g. `find MediaPlayer.app -name ffmpeg`)
 - Calling `ffmpeg` from the packaged application works on a machine without a system-level `ffmpeg` install (verify if possible; otherwise document the verification limit, consistent with the US-060 note from V1)
@@ -593,6 +624,7 @@
 **As a** developer, **I want** a class extracting a representative frame from a video file via `ffmpeg` as a subprocess, **so that** thumbnails are available for the playlist (PRD V2 F16).
 
 **Acceptance criteria:**
+
 - `core/thumbnail_generator.py` defines a `generate_thumbnail(media_item: MediaItem, cache_dir: Path) -> Path | None` function or class
 - Extraction uses `subprocess.run()` with an explicit timeout (e.g. 10 seconds) to avoid an indefinite hang on a problematic file
 - The frame is extracted at a position relative to the duration (e.g. 10%), not at position 0 (often a black screen at the start of a video)
@@ -613,6 +645,7 @@
 **As a** user, **I want** to see a visual preview of each video in my playlist, **so that** I can identify my files more quickly.
 
 **Acceptance criteria:**
+
 - `ui/playlist_widget.py` displays the generated thumbnail (US-111) next to `display_name` for each video item
 - While generation is in progress (potentially asynchronous, see PRD V2 non-functional requirement, section 5), a loading icon or neutral placeholder is shown instead
 - If `generate_thumbnail()` returns `None`, a generic icon (e.g. a generic video-file icon) is shown with no visible error to the user
@@ -631,6 +664,7 @@
 **As a** developer, **I want** to verify that thumbnail generation stays stable across a large number of files, **so that** F16's architectural choice (`ffmpeg` subprocess) is confirmed to hold up under load before the feature is considered complete.
 
 **Acceptance criteria:**
+
 - A test (manual or automated) generates thumbnails for a playlist of at least 20 different video files (varied formats where possible: MP4, MKV, WebM)
 - No zombie `ffmpeg` processes remain active after generation completes (verifiable via `ps aux | grep ffmpeg` after the run)
 - The cumulative generation time for 20 files stays within a reasonable order of magnitude (to be documented with an actual measured value, not an estimate)
@@ -651,6 +685,7 @@
 **As a** developer, **I want** a function parsing an `.srt` file into a usable data structure, **so that** synchronised subtitle display can be built on top of it (PRD V2 F17).
 
 **Acceptance criteria:**
+
 - `core/subtitle_parser.py` defines a `parse_srt(path: Path) -> list[SubtitleEntry]` function, with `SubtitleEntry` a dataclass in `core/models.py` (`start_ms: int`, `end_ms: int`, `text: str`)
 - The parser handles the two most common encodings (UTF-8, Latin-1/Windows-1252), with automatic detection or fallback
 - A malformed `.srt` file (invalid syntax, inconsistent timecodes) does not raise an unhandled exception — it returns an empty or partial list of recoverable valid content
@@ -669,6 +704,7 @@
 **As a** developer, **I want** a widget displaying text overlaid on the video, **so that** the visual component needed for subtitle display is in place.
 
 **Acceptance criteria:**
+
 - `ui/subtitle_overlay.py` defines a `QLabel` (or equivalent widget) positioned as an overlay on `QVideoWidget`, in the lower third of the video area
 - The text remains readable against a variable video background (a semi-transparent backdrop behind the text, or an outline/drop shadow on the text)
 - The widget exposes a `set_text(text: str)` method and a `clear()` method
@@ -687,6 +723,7 @@
 **As a** user, **I want** to load an `.srt` file and see subtitles displayed in sync with the video, **so that** I can follow content in a language I do not fully understand.
 
 **Acceptance criteria:**
+
 - A menu or button "Load subtitles" opens an `.srt` file selection dialog
 - `PlayerViewModel` listens to `positionChanged` and determines the matching `SubtitleEntry` (if `start_ms <= position <= end_ms` for an entry), with a synchronisation tolerance of a few hundred milliseconds
 - `SubtitleOverlay.set_text()` is called when the active entry changes, and `clear()` when no entry is active
