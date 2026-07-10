@@ -6,12 +6,34 @@
 # Windows, .dylib équivalent sur macOS) : vérifier après build qu'il est
 # bien présent dans le dossier `dist/` généré, et pas seulement sur la
 # machine de build (sur macOS, `otool -L` sur le binaire final).
+#
+# US-110 : bundle aussi le binaire CLI `ffmpeg` (distinct du plugin
+# QtMultimedia ci-dessus) via `binaries=[...]`, requis par
+# core/thumbnail_generator.py (US-111) qui l'invoque en sous-processus pour
+# extraire une frame de prévisualisation — indépendamment de la lecture Qt.
+# Résolu dynamiquement via le PATH de la machine de build (shutil.which)
+# plutôt que codé en dur, pour rester portable ; à défaut, définir la
+# variable d'environnement FFMPEG_BINARY_PATH avant de lancer pyinstaller.
+import os
+import shutil
 import sys
+
+ffmpeg_path = os.environ.get("FFMPEG_BINARY_PATH") or shutil.which("ffmpeg")
+if ffmpeg_path:
+    binaries = [(ffmpeg_path, ".")]
+else:
+    print(
+        "AVERTISSEMENT (US-110) : binaire ffmpeg introuvable (ni sur le PATH, "
+        "ni via FFMPEG_BINARY_PATH) — l'exécutable packagé n'embarquera pas "
+        "ffmpeg, et la génération de miniatures (US-111) échouera à l'exécution.",
+        file=sys.stderr,
+    )
+    binaries = []
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=[],
     hiddenimports=[],
     hookspath=[],

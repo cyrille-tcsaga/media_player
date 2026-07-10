@@ -68,6 +68,23 @@ L'exécutable est produit dans `dist/media_player/` :
 
 **Limite de vérification actuelle :** ce build a été généré et testé (lancement de l'exécutable, présence de `ffmpegmediaplugin.dll`) sur Windows uniquement — l'environnement de développement de ce projet ne dispose pas d'une machine macOS. La vérification `otool -L` du bundle `.app` reste à faire sur macOS avant packaging final.
 
+### Binaire ffmpeg embarqué (US-110, pour les miniatures F16)
+
+En plus du plugin QtMultimedia ci-dessus (qui sert à la *lecture*), `media_player.spec` embarque désormais le binaire **CLI** `ffmpeg`, invoqué en sous-processus par `core/thumbnail_generator.py` (US-111) pour extraire une frame de prévisualisation — un besoin distinct de la lecture Qt.
+
+Le binaire est résolu dynamiquement au moment du build via `shutil.which("ffmpeg")` (ou la variable d'environnement `FFMPEG_BINARY_PATH` si `ffmpeg` n'est pas sur le `PATH`), plutôt que codé en dur, pour rester portable entre machines de build.
+
+**Mesure de taille (machine de dev, Windows, build `--onedir`) :**
+
+| | Taille de `dist/media_player/` |
+|---|---|
+| Avant (sans ffmpeg embarqué) | 123 Mo |
+| Après (avec ffmpeg embarqué) | 355 Mo (+232 Mo) |
+
+Le binaire `ffmpeg` utilisé ([Gyan.FFmpeg](https://www.gyan.dev/ffmpeg/builds/), installé via `winget install Gyan.FFmpeg`) est un *full build* (tous les codecs/filtres activés, ~231 Mo) — un build *essentials* plus restreint réduirait sensiblement cette taille si besoin, à évaluer si l'empreinte disque devient un problème réel.
+
+**Vérifications effectuées :** après build, `dist/media_player/_internal/ffmpeg.exe` est bien présent et s'exécute correctement (`ffmpeg -version`) même lorsque `ffmpeg` est retiré du `PATH` système — preuve que l'exécutable packagé ne dépend pas d'une installation système. La vérification stricte "sur une machine sans ffmpeg installé du tout" (au sens : un autre poste) n'a pas pu être faite dans cet environnement de dev (une seule machine disponible) ; documentée ici comme limite explicite, cohérent avec la note de US-060.
+
 ## Documentation
 
 - [`docs/PRD_Lecteur_Media_PyQt6.md`](docs/PRD_Lecteur_Media_PyQt6.md) — spécification produit/technique du MVP
