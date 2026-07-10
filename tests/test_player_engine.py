@@ -23,6 +23,48 @@ def test_load_then_play_sets_state_to_playing(qapp, qtbot):
     qtbot.wait(200)
 
 
+def test_pause_after_play_sets_state_to_paused(qapp, qtbot):
+    engine = PlayerEngine()
+    engine.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+
+    with qtbot.waitSignal(engine.state_changed, timeout=2000):
+        engine.play()
+
+    with qtbot.waitSignal(engine.state_changed, timeout=2000):
+        engine.pause()
+
+    assert engine.state == PlaybackState.PAUSED
+
+    engine.stop()
+    qtbot.wait(200)
+
+
+def test_set_position_seeks_and_emits_position_changed(qapp, qtbot):
+    engine = PlayerEngine()
+    engine.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+
+    # setPosition() sur un média jamais joué n'émet pas positionChanged sur ce
+    # backend : il faut d'abord amorcer la lecture.
+    with qtbot.waitSignal(engine.state_changed, timeout=2000):
+        engine.play()
+
+    with qtbot.waitSignal(engine.position_changed, timeout=2000) as blocker:
+        engine.set_position(1000)
+
+    assert blocker.args == [1000]
+
+    engine.stop()
+    qtbot.wait(200)
+
+
+def test_set_volume_updates_volume_property(qapp):
+    engine = PlayerEngine()
+
+    engine.set_volume(0.5)
+
+    assert engine.volume == 0.5
+
+
 def test_load_nonexistent_file_emits_error_and_returns_to_stopped(qapp, qtbot):
     missing_path = Path(__file__).parent / "fixtures" / "does_not_exist.mp3"
     engine = PlayerEngine()
