@@ -372,3 +372,55 @@ def test_startup_restores_previously_saved_volume(qapp, qtbot, tmp_path):
 
     assert window.volume_widget.slider.value() == 37
     assert window.viewmodel.volume == 37
+
+
+def test_entering_fullscreen_moves_controls_to_video_overlay(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+
+    window._toggle_fullscreen()
+
+    assert window.controls_widget.parentWidget() is window.video_widget
+    assert window.controls_widget.property("overlayMode") is True
+    assert window._central_layout.indexOf(window.controls_widget) == -1
+
+
+def test_exiting_fullscreen_restores_controls_to_docked_position(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+
+    window._toggle_fullscreen()
+    window._toggle_fullscreen()
+
+    assert window._central_layout.indexOf(window.controls_widget) == window._controls_dock_index
+    assert window.controls_widget.property("overlayMode") is False
+    # Même instance, toujours fonctionnelle : les signaux existants restent
+    # câblés sans avoir besoin de reconnexion.
+    with qtbot.waitSignal(window.controls_widget.play_requested, timeout=1000):
+        window.controls_widget.play_button.click()
+
+
+def test_escape_while_fullscreen_also_restores_controls(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window._toggle_fullscreen()
+
+    window._exit_fullscreen()
+
+    assert window._central_layout.indexOf(window.controls_widget) == window._controls_dock_index
+    assert window.controls_widget.property("overlayMode") is False

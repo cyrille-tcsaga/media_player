@@ -79,6 +79,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.volume_widget)
         layout.addWidget(self.playlist_widget)
         self.setCentralWidget(central)
+        self._central_layout = layout
+        # US-130 : position d'origine de controls_widget dans le layout, pour
+        # l'y réinsérer telle quelle à la sortie du plein écran (ancré en bas,
+        # sans redémarrage ni réinitialisation d'état — même instance de
+        # widget, juste reparentée).
+        self._controls_dock_index = layout.indexOf(self.controls_widget)
 
         self.controls_widget.play_requested.connect(self.viewmodel.play)
         self.controls_widget.pause_requested.connect(self.viewmodel.pause)
@@ -207,13 +213,36 @@ class MainWindow(QMainWindow):
         if self.mini_mode_window.isVisible():
             return
         if self.isFullScreen():
-            self.showNormal()
+            self._exit_fullscreen()
         else:
-            self.showFullScreen()
+            self._enter_fullscreen()
+
+    def _enter_fullscreen(self) -> None:
+        self.showFullScreen()
+        self._move_controls_to_overlay()
 
     def _exit_fullscreen(self) -> None:
         if self.isFullScreen():
             self.showNormal()
+            self._restore_controls_to_docked_position()
+
+    def _move_controls_to_overlay(self) -> None:
+        # US-130 : réutilise l'instance existante de controls_widget plutôt
+        # que d'en créer une seconde pour le mode plein écran — seuls le
+        # parent et le style QSS changent, la logique/les signaux restent
+        # identiques.
+        self._central_layout.removeWidget(self.controls_widget)
+        self.controls_widget.setParent(self.video_widget)
+        self.controls_widget.set_overlay_mode(True)
+        self.controls_widget.show()
+        self.video_widget.set_overlay_controls(self.controls_widget)
+
+    def _restore_controls_to_docked_position(self) -> None:
+        self.video_widget.set_overlay_controls(None)
+        self.controls_widget.set_overlay_mode(False)
+        self.controls_widget.setParent(None)
+        self._central_layout.insertWidget(self._controls_dock_index, self.controls_widget)
+        self.controls_widget.show()
 
     def _enter_mini_mode(self) -> None:
         # Décision explicite (résout le TODO(US-101) laissé par US-082) : le

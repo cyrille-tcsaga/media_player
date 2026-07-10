@@ -52,3 +52,24 @@ QSlider::handle:horizontal {
 QLabel {
     color: #1a1a1a;
 }
+
+/* US-130 : superposition semi-transparente sur la vidéo en plein écran.
+   Volontairement identique au thème sombre (ui/resources/dark.qss) : la
+   vidéo affichée en dessous a un contenu variable, un fond sombre reste le
+   choix le plus sûr pour la lisibilité quel que soit le thème de l'app. */
+ControlsWidget[overlayMode="true"] {
+    background-color: rgba(0, 0, 0, 160);
+    border-radius: 10px;
+    border: none;
+}
+
+ControlsWidget[overlayMode="true"] QPushButton,
+ControlsWidget[overlayMode="true"] QComboBox {
+    background-color: rgba(255, 255, 255, 30);
+    border: none;
+}
+
+ControlsWidget[overlayMode="true"] QPushButton:hover,
+ControlsWidget[overlayMode="true"] QComboBox:hover {
+    background-color: rgba(255, 255, 255, 60);
+}

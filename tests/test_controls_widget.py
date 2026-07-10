@@ -40,3 +40,16 @@ def test_shuffle_button_toggles_and_emits_signal(qapp, qtbot):
         controls.shuffle_button.click()
     assert blocker.args == [False]
     assert controls.shuffle_button.text() == "Aléatoire: Off"
+
+
+def test_set_overlay_mode_toggles_dynamic_property(qapp, qtbot):
+    controls = ControlsWidget()
+    qtbot.addWidget(controls)
+
+    assert controls.property("overlayMode") in (None, False)
+
+    controls.set_overlay_mode(True)
+    assert controls.property("overlayMode") is True
+
+    controls.set_overlay_mode(False)
+    assert controls.property("overlayMode") is False

@@ -76,3 +76,13 @@ class ControlsWidget(QWidget):
     def _on_shuffle_toggled(self, checked: bool) -> None:
         self.shuffle_button.setText(f"Aléatoire: {'On' if checked else 'Off'}")
         self.shuffle_enabled_changed.emit(checked)
+
+    def set_overlay_mode(self, enabled: bool) -> None:
+        # US-130 : bascule le style QSS entre la barre ancrée normale et la
+        # superposition semi-transparente en plein écran (cf.
+        # ui/resources/{dark,light}.qss, sélecteur ControlsWidget[overlayMode]).
+        # unpolish()/polish() est requis pour que Qt réévalue le sélecteur
+        # basé sur une propriété dynamique après setProperty().
+        self.setProperty("overlayMode", enabled)
+        self.style().unpolish(self)
+        self.style().polish(self)
