@@ -2,16 +2,19 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.models import MediaItem, PlaybackState
 from core.player_engine import PlayerEngine
+from core.playlist_manager import PlaylistManager
 
 
 class PlayerViewModel(QObject):
     state_changed = pyqtSignal(PlaybackState)
     position_changed = pyqtSignal(int)
     duration_changed = pyqtSignal(int)
+    playlist_changed = pyqtSignal()
 
     def __init__(self, engine: PlayerEngine | None = None) -> None:
         super().__init__()
         self._engine = engine if engine is not None else PlayerEngine()
+        self._playlist = PlaylistManager()
         self._position = 0
         self._duration = 0
 
@@ -34,6 +37,30 @@ class PlayerViewModel(QObject):
     @property
     def volume(self) -> int:
         return round(self._engine.volume * 100)
+
+    @property
+    def playlist_items(self) -> list[MediaItem]:
+        return self._playlist.items
+
+    @property
+    def current_index(self) -> int | None:
+        return self._playlist.current_index
+
+    def add_to_playlist(self, media_item: MediaItem) -> None:
+        self._playlist.add(media_item)
+        self.playlist_changed.emit()
+
+    def remove_from_playlist(self, index: int) -> None:
+        self._playlist.remove(index)
+        self.playlist_changed.emit()
+
+    def play_at(self, index: int) -> None:
+        media_item = self._playlist.select(index)
+        if media_item is None:
+            return
+        self.load(media_item)
+        self.play()
+        self.playlist_changed.emit()
 
     def load(self, media_item: MediaItem) -> None:
         self._engine.load(media_item)

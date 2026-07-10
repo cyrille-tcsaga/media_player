@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QVBoxLayout,
 
 from core.models import MediaItem, PlaybackState
 from ui.controls_widget import ControlsWidget
+from ui.playlist_widget import PlaylistWidget
 from ui.progress_widget import ProgressWidget
 from ui.video_widget import VideoWidget
 from ui.volume_widget import VolumeWidget
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow):
         self.controls_widget = ControlsWidget()
         self.progress_widget = ProgressWidget()
         self.volume_widget = VolumeWidget()
+        self.playlist_widget = PlaylistWidget()
         self.viewmodel.set_video_output(self.video_widget)
 
         central = QWidget()
@@ -40,6 +42,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.progress_widget)
         layout.addWidget(self.controls_widget)
         layout.addWidget(self.volume_widget)
+        layout.addWidget(self.playlist_widget)
         self.setCentralWidget(central)
 
         self.controls_widget.play_requested.connect(self.viewmodel.play)
@@ -51,6 +54,10 @@ class MainWindow(QMainWindow):
         self.progress_widget.seek_requested.connect(self.viewmodel.set_position)
 
         self.volume_widget.volume_changed.connect(self.viewmodel.set_volume)
+
+        self.playlist_widget.item_activated.connect(self.viewmodel.play_at)
+        self.playlist_widget.remove_requested.connect(self.viewmodel.remove_from_playlist)
+        self.viewmodel.playlist_changed.connect(self._on_playlist_changed)
 
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")
@@ -92,8 +99,11 @@ class MainWindow(QMainWindow):
             return
 
         path = Path(file_path)
-        self.viewmodel.load(MediaItem(file_path=path, display_name=path.name))
-        self.viewmodel.play()
+        self.viewmodel.add_to_playlist(MediaItem(file_path=path, display_name=path.name))
+        self.viewmodel.play_at(len(self.viewmodel.playlist_items) - 1)
+
+    def _on_playlist_changed(self) -> None:
+        self.playlist_widget.set_items(self.viewmodel.playlist_items, self.viewmodel.current_index)
 
     def closeEvent(self, event) -> None:
         # Cf. tests/test_player_engine.py : ramener à STOPPED avant destruction,
