@@ -39,9 +39,10 @@ media_player/
 │   └── models.py            # Dataclasses: MediaItem, PlaybackState, etc.
 ├── ui/
 │   ├── main_window.py       # QMainWindow, assembles the widgets
-│   ├── controls_widget.py   # Play/pause/stop/volume buttons
+│   ├── controls_widget.py   # Play/pause/stop buttons
 │   ├── progress_widget.py   # Progress slider + time labels
 │   ├── playlist_widget.py   # Custom QListWidget for the playlist
+│   ├── volume_widget.py     # Volume slider + mute/unmute button
 │   └── video_widget.py      # QVideoWidget wrapper with aspect ratio handling
 ├── viewmodels/
 │   └── player_viewmodel.py  # Bridges core/ and ui/, exposes Qt signals

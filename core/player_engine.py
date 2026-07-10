@@ -51,6 +51,13 @@ class PlayerEngine(QObject):
     def set_position(self, position_ms: int) -> None:
         self._player.setPosition(position_ms)
 
+    @property
+    def volume(self) -> float:
+        return self._audio_output.volume()
+
+    def set_volume(self, volume: float) -> None:
+        self._audio_output.setVolume(volume)
+
     def _on_playback_state_changed(self, qt_state: QMediaPlayer.PlaybackState) -> None:
         self._state = _QT_STATE_TO_PLAYBACK_STATE.get(qt_state, self._state)
         self.state_changed.emit(self._state)

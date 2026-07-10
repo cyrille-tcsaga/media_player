@@ -6,6 +6,7 @@ from core.models import MediaItem
 from ui.controls_widget import ControlsWidget
 from ui.progress_widget import ProgressWidget
 from ui.video_widget import VideoWidget
+from ui.volume_widget import VolumeWidget
 from viewmodels.player_viewmodel import PlayerViewModel
 
 MEDIA_FILE_FILTER = (
@@ -25,6 +26,7 @@ class MainWindow(QMainWindow):
         self.video_widget = VideoWidget()
         self.controls_widget = ControlsWidget()
         self.progress_widget = ProgressWidget()
+        self.volume_widget = VolumeWidget()
         self.viewmodel.set_video_output(self.video_widget)
 
         central = QWidget()
@@ -32,6 +34,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.video_widget)
         layout.addWidget(self.progress_widget)
         layout.addWidget(self.controls_widget)
+        layout.addWidget(self.volume_widget)
         self.setCentralWidget(central)
 
         self.controls_widget.play_requested.connect(self.viewmodel.play)
@@ -41,6 +44,8 @@ class MainWindow(QMainWindow):
         self.viewmodel.position_changed.connect(self.progress_widget.set_position)
         self.viewmodel.duration_changed.connect(self.progress_widget.set_duration)
         self.progress_widget.seek_requested.connect(self.viewmodel.set_position)
+
+        self.volume_widget.volume_changed.connect(self.viewmodel.set_volume)
 
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")

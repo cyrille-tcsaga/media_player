@@ -20,6 +20,10 @@ class PlayerViewModel(QObject):
     def state(self) -> PlaybackState:
         return self._engine.state
 
+    @property
+    def volume(self) -> int:
+        return round(self._engine.volume * 100)
+
     def load(self, media_item: MediaItem) -> None:
         self._engine.load(media_item)
 
@@ -37,3 +41,6 @@ class PlayerViewModel(QObject):
 
     def set_position(self, position_ms: int) -> None:
         self._engine.set_position(position_ms)
+
+    def set_volume(self, volume_percent: int) -> None:
+        self._engine.set_volume(volume_percent / 100)
