@@ -9,12 +9,23 @@ _QT_STATE_TO_PLAYBACK_STATE = {
     QMediaPlayer.PlaybackState.PausedState: PlaybackState.PAUSED,
 }
 
+_QT_ERROR_TO_MESSAGE = {
+    QMediaPlayer.Error.ResourceError: (
+        "Impossible d'accéder au fichier média : il est introuvable ou endommagé."
+    ),
+    QMediaPlayer.Error.FormatError: "Ce format de fichier n'est pas pris en charge.",
+    QMediaPlayer.Error.NetworkError: "Une erreur réseau a interrompu la lecture.",
+    QMediaPlayer.Error.AccessDeniedError: "Accès refusé à ce fichier média.",
+}
+_DEFAULT_ERROR_MESSAGE = "Une erreur inattendue est survenue pendant la lecture."
+
 
 class PlayerEngine(QObject):
     state_changed = pyqtSignal(PlaybackState)
     position_changed = pyqtSignal(int)
     duration_changed = pyqtSignal(int)
     media_finished = pyqtSignal()
+    error_occurred = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -71,6 +82,16 @@ class PlayerEngine(QObject):
 
     def _on_error(self, error: QMediaPlayer.Error, error_string: str) -> None:
         self._state = PlaybackState.ERROR
+        self.state_changed.emit(self._state)
+        message = _QT_ERROR_TO_MESSAGE.get(error, _DEFAULT_ERROR_MESSAGE)
+        self.error_occurred.emit(message)
+
+        # Revient explicitement à STOPPED (cf. US-050) : self._player.stop() ne
+        # réémet pas toujours playbackStateChanged ici, car le lecteur n'a
+        # souvent jamais atteint PlayingState (ex. fichier introuvable), donc
+        # Qt ne considère pas stop() comme un changement d'état réel.
+        self._player.stop()
+        self._state = PlaybackState.STOPPED
         self.state_changed.emit(self._state)
 
     def _on_position_changed(self, position_ms: int) -> None:

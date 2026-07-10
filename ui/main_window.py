@@ -2,7 +2,14 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.models import MediaItem, PlaybackState
 from ui.controls_widget import ControlsWidget
@@ -73,6 +80,7 @@ class MainWindow(QMainWindow):
         self.playlist_widget.item_activated.connect(self.viewmodel.play_at)
         self.playlist_widget.remove_requested.connect(self.viewmodel.remove_from_playlist)
         self.viewmodel.playlist_changed.connect(self._on_playlist_changed)
+        self.viewmodel.error_occurred.connect(self._on_playback_error)
 
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")
@@ -117,6 +125,9 @@ class MainWindow(QMainWindow):
 
     def _on_playlist_changed(self) -> None:
         self.playlist_widget.set_items(self.viewmodel.playlist_items, self.viewmodel.current_index)
+
+    def _on_playback_error(self, message: str) -> None:
+        QMessageBox.warning(self, "Erreur de lecture", message)
 
     def _add_files_to_playlist(self, paths: list[Path]) -> None:
         was_playing = self.viewmodel.state == PlaybackState.PLAYING

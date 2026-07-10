@@ -23,6 +23,17 @@ def test_load_then_play_sets_state_to_playing(qapp, qtbot):
     qtbot.wait(200)
 
 
+def test_load_nonexistent_file_emits_error_and_returns_to_stopped(qapp, qtbot):
+    missing_path = Path(__file__).parent / "fixtures" / "does_not_exist.mp3"
+    engine = PlayerEngine()
+
+    with qtbot.waitSignal(engine.error_occurred, timeout=2000):
+        engine.load(MediaItem(file_path=missing_path, display_name="does_not_exist.mp3"))
+        engine.play()
+
+    assert engine.state == PlaybackState.STOPPED
+
+
 def test_media_finished_emitted_at_end_of_track(qapp, qtbot):
     engine = PlayerEngine()
     engine.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))

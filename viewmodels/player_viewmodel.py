@@ -10,6 +10,7 @@ class PlayerViewModel(QObject):
     position_changed = pyqtSignal(int)
     duration_changed = pyqtSignal(int)
     playlist_changed = pyqtSignal()
+    error_occurred = pyqtSignal(str)
 
     def __init__(self, engine: PlayerEngine | None = None) -> None:
         super().__init__()
@@ -22,6 +23,7 @@ class PlayerViewModel(QObject):
         self._engine.position_changed.connect(self._on_position_changed)
         self._engine.duration_changed.connect(self._on_duration_changed)
         self._engine.media_finished.connect(self._on_media_finished)
+        self._engine.error_occurred.connect(self.error_occurred)
 
     @property
     def state(self) -> PlaybackState:

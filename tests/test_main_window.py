@@ -2,6 +2,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QMimeData, QPointF, Qt, QUrl
 from PyQt6.QtGui import QDropEvent
+from PyQt6.QtWidgets import QMessageBox
 
 from core.models import PlaybackState
 from ui.main_window import MainWindow
@@ -67,3 +68,17 @@ def test_drop_ignores_files_with_unrecognized_extension(qapp, qtbot):
 
     assert window.viewmodel.playlist_items == []
     assert window.viewmodel.state == PlaybackState.STOPPED
+
+
+def test_playback_error_shows_message_box(qapp, qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+
+    captured = {}
+    monkeypatch.setattr(
+        QMessageBox, "warning", lambda parent, title, message: captured.update(message=message)
+    )
+
+    window.viewmodel.error_occurred.emit("Ce format de fichier n'est pas pris en charge.")
+
+    assert captured["message"] == "Ce format de fichier n'est pas pris en charge."
