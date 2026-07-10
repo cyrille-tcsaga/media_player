@@ -99,10 +99,14 @@ class MainWindow(QMainWindow):
         self.playlist_widget.remove_requested.connect(self.viewmodel.remove_from_playlist)
         self.viewmodel.playlist_changed.connect(self._on_playlist_changed)
         self.viewmodel.error_occurred.connect(self._on_playback_error)
+        self.viewmodel.subtitle_text_changed.connect(self._on_subtitle_text_changed)
+        self.viewmodel.subtitles_loaded.connect(self._on_subtitles_loaded)
 
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")
         open_action.triggered.connect(self._open_file)
+        subtitles_action = file_menu.addAction("Charger les sous-titres")
+        subtitles_action.triggered.connect(self._load_subtitles)
 
         self._build_theme_menu()
         self._build_shortcuts()
@@ -224,11 +228,35 @@ class MainWindow(QMainWindow):
 
         self._add_files_to_playlist([Path(file_path)])
 
+    def _load_subtitles(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Charger les sous-titres", "", "Sous-titres (*.srt)"
+        )
+        if not file_path:
+            return
+        self.viewmodel.load_subtitles(Path(file_path))
+
     def _on_playlist_changed(self) -> None:
         self.playlist_widget.set_items(self.viewmodel.playlist_items, self.viewmodel.current_index)
 
     def _on_playback_error(self, message: str) -> None:
         QMessageBox.warning(self, "Erreur de lecture", message)
+
+    def _on_subtitle_text_changed(self, text: str) -> None:
+        if text:
+            self.video_widget.subtitle_overlay.set_text(text)
+        else:
+            self.video_widget.subtitle_overlay.clear()
+
+    def _on_subtitles_loaded(self, success: bool) -> None:
+        if not success:
+            # Dégradation gracieuse (PRD V2 section 5) : message discret dans
+            # la barre de statut plutôt qu'une boîte de dialogue bloquante, la
+            # lecture vidéo continue normalement.
+            self.statusBar().showMessage(
+                "Le fichier de sous-titres n'a pas pu être chargé (format invalide ou vide).",
+                5000,
+            )
 
     def _add_files_to_playlist(self, paths: list[Path]) -> None:
         was_playing = self.viewmodel.state == PlaybackState.PLAYING

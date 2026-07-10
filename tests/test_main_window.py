@@ -313,3 +313,33 @@ def test_toggle_fullscreen_is_noop_while_mini_mode_active(qapp, qtbot, tmp_path)
     window._toggle_fullscreen()
 
     assert not window.isFullScreen()
+
+
+def test_loading_malformed_subtitles_shows_status_bar_message(qapp, qtbot, tmp_path):
+    srt_path = tmp_path / "broken.srt"
+    srt_path.write_text("not a valid srt file at all", encoding="utf-8")
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+
+    window.viewmodel.load_subtitles(srt_path)
+
+    assert "sous-titres" in window.statusBar().currentMessage().lower()
+
+
+def test_loading_valid_subtitles_does_not_show_status_bar_message(qapp, qtbot, tmp_path):
+    srt_path = tmp_path / "valid.srt"
+    srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n", encoding="utf-8")
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+
+    window.viewmodel.load_subtitles(srt_path)
+
+    assert window.statusBar().currentMessage() == ""

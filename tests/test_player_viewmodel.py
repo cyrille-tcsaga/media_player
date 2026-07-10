@@ -199,3 +199,51 @@ def test_media_finished_restarts_same_track_when_repeat_mode_is_track(qapp, qtbo
 
     viewmodel.stop()
     qtbot.wait(200)
+
+
+def test_load_subtitles_emits_true_for_valid_file(qapp, qtbot, tmp_path):
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n", encoding="utf-8")
+    viewmodel = PlayerViewModel(PlayerEngine())
+
+    with qtbot.waitSignal(viewmodel.subtitles_loaded) as blocker:
+        viewmodel.load_subtitles(srt_path)
+
+    assert blocker.args == [True]
+
+
+def test_load_subtitles_emits_false_for_malformed_file(qapp, qtbot, tmp_path):
+    srt_path = tmp_path / "broken.srt"
+    srt_path.write_text("not a valid srt file", encoding="utf-8")
+    viewmodel = PlayerViewModel(PlayerEngine())
+
+    with qtbot.waitSignal(viewmodel.subtitles_loaded) as blocker:
+        viewmodel.load_subtitles(srt_path)
+
+    assert blocker.args == [False]
+
+
+def test_subtitle_text_follows_position_progression(qapp, qtbot, tmp_path):
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nFirst\n\n2\n00:00:02,000 --> 00:00:03,000\nSecond\n",
+        encoding="utf-8",
+    )
+    viewmodel = PlayerViewModel(PlayerEngine())
+    captured = []
+    viewmodel.subtitle_text_changed.connect(captured.append)
+
+    # load_subtitles() synchronise immédiatement l'overlay avec la position
+    # courante (utile si des sous-titres sont chargés en cours de lecture) :
+    # se connecter au signal avant l'appel, comme le fait MainWindow.__init__
+    # en usage réel, pour ne pas manquer cette émission initiale.
+    viewmodel.load_subtitles(srt_path)
+
+    viewmodel._on_position_changed(500)
+    assert captured[-1] == "First"
+
+    viewmodel._on_position_changed(1500)
+    assert captured[-1] == ""
+
+    viewmodel._on_position_changed(2500)
+    assert captured[-1] == "Second"

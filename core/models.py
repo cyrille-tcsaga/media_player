@@ -10,6 +10,13 @@ class MediaItem:
     duration_ms: int | None = None
 
 
+@dataclass
+class SubtitleEntry:
+    start_ms: int
+    end_ms: int
+    text: str
+
+
 class PlaybackState(Enum):
     STOPPED = auto()
     PLAYING = auto()

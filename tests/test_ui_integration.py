@@ -82,3 +82,32 @@ def test_mini_mode_action_updates_state_visible_from_main_window(qapp, qtbot, tm
 
     window.viewmodel.stop()
     qtbot.wait(200)
+
+
+def test_subtitle_overlay_follows_position_progression(qapp, qtbot, tmp_path):
+    # US-122 : simule une progression de position (sans lecture réelle, cf.
+    # notes sur qtbot.waitUntil ailleurs dans ce fichier) et vérifie que le
+    # texte affiché par SubtitleOverlay correspond à l'entrée SRT attendue à
+    # différents instants.
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nFirst\n\n2\n00:00:02,000 --> 00:00:03,000\nSecond\n",
+        encoding="utf-8",
+    )
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+
+    window.viewmodel.load_subtitles(srt_path)
+
+    window.viewmodel._on_position_changed(500)
+    assert window.video_widget.subtitle_overlay.text() == "First"
+
+    window.viewmodel._on_position_changed(1500)
+    assert window.video_widget.subtitle_overlay.text() == ""
+
+    window.viewmodel._on_position_changed(2500)
+    assert window.video_widget.subtitle_overlay.text() == "Second"

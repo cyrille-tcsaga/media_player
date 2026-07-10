@@ -2,9 +2,15 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.models import MediaItem, PlaybackState, RepeatMode
+from core.models import MediaItem, PlaybackState, RepeatMode, SubtitleEntry
 from core.player_engine import PlayerEngine
 from core.playlist_manager import PlaylistManager
+from core.subtitle_parser import parse_srt
+
+# Tolérance de synchronisation (US-122) : une entrée reste affichée quelques
+# centaines de ms au-delà de ses bornes strictes, pour absorber un léger
+# décalage entre positionChanged et l'affichage.
+SUBTITLE_SYNC_TOLERANCE_MS = 300
 
 
 class PlayerViewModel(QObject):
@@ -13,6 +19,8 @@ class PlayerViewModel(QObject):
     duration_changed = pyqtSignal(int)
     playlist_changed = pyqtSignal()
     error_occurred = pyqtSignal(str)
+    subtitle_text_changed = pyqtSignal(str)
+    subtitles_loaded = pyqtSignal(bool)
 
     def __init__(
         self, engine: PlayerEngine | None = None, playlist_path: Path | None = None
@@ -22,6 +30,8 @@ class PlayerViewModel(QObject):
         self._playlist = PlaylistManager(playlist_path=playlist_path)
         self._position = 0
         self._duration = 0
+        self._subtitle_entries: list[SubtitleEntry] = []
+        self._current_subtitle_text: str | None = None
 
         self._engine.state_changed.connect(self.state_changed)
         self._engine.position_changed.connect(self._on_position_changed)
@@ -137,9 +147,34 @@ class PlayerViewModel(QObject):
     def set_shuffle_enabled(self, enabled: bool) -> None:
         self._playlist.set_shuffle_enabled(enabled)
 
+    def load_subtitles(self, path: Path) -> None:
+        self._subtitle_entries = parse_srt(path)
+        # Un résultat vide couvre à la fois un fichier malformé et un fichier
+        # valide mais sans entrée (US-122 ne distingue pas les deux cas) :
+        # dégradation gracieuse via un message discret côté UI, sans bloquer
+        # la lecture en cours.
+        self.subtitles_loaded.emit(bool(self._subtitle_entries))
+        self._update_subtitle_for_position(self._position)
+
     def _on_position_changed(self, position_ms: int) -> None:
         self._position = position_ms
         self.position_changed.emit(position_ms)
+        self._update_subtitle_for_position(position_ms)
+
+    def _update_subtitle_for_position(self, position_ms: int) -> None:
+        matching_text = None
+        for entry in self._subtitle_entries:
+            if (
+                entry.start_ms - SUBTITLE_SYNC_TOLERANCE_MS
+                <= position_ms
+                <= entry.end_ms + SUBTITLE_SYNC_TOLERANCE_MS
+            ):
+                matching_text = entry.text
+                break
+
+        if matching_text != self._current_subtitle_text:
+            self._current_subtitle_text = matching_text
+            self.subtitle_text_changed.emit(matching_text or "")
 
     def _on_duration_changed(self, duration_ms: int) -> None:
         self._duration = duration_ms
