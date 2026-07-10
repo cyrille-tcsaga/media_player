@@ -213,3 +213,57 @@ def test_startup_without_saved_theme_uses_system_detection(qapp, qtbot, monkeypa
     # Une détection au premier lancement ne doit pas être sauvegardée comme un
     # choix explicite de l'utilisateur.
     assert SettingsManager(settings_path).get("theme") is None
+
+
+def test_entering_mini_mode_hides_main_window_and_shows_mini_window(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+    )
+    qtbot.addWidget(window)
+    window.show()
+
+    window._enter_mini_mode()
+
+    assert not window.isVisible()
+    assert window.mini_mode_window.isVisible()
+
+
+def test_closing_mini_mode_restores_main_window(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window._enter_mini_mode()
+
+    window.mini_mode_window.closed.emit()
+
+    assert window.isVisible()
+    assert not window.mini_mode_window.isVisible()
+
+
+def test_entering_mini_mode_exits_fullscreen_first(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window.showFullScreen()
+    assert window.isFullScreen()
+
+    window._enter_mini_mode()
+
+    assert not window.isFullScreen()
+
+
+def test_toggle_fullscreen_is_noop_while_mini_mode_active(qapp, qtbot, tmp_path):
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+    )
+    qtbot.addWidget(window)
+    window.show()
+    window._enter_mini_mode()
+
+    window._toggle_fullscreen()
+
+    assert not window.isFullScreen()

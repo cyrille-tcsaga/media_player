@@ -15,6 +15,7 @@ from core.models import MediaItem, PlaybackState
 from core.playlist_persistence import DEFAULT_PLAYLIST_PATH, load_playlist_with_missing_count
 from core.settings_manager import DEFAULT_SETTINGS_PATH, SettingsManager
 from ui.controls_widget import ControlsWidget
+from ui.mini_mode_window import MiniModeWindow
 from ui.playlist_widget import PlaylistWidget
 from ui.progress_widget import ProgressWidget
 from ui.theme_manager import Theme, apply_theme, detect_system_theme
@@ -64,6 +65,9 @@ class MainWindow(QMainWindow):
         self.playlist_widget = PlaylistWidget()
         self.viewmodel.set_video_output(self.video_widget)
         self.video_widget.installEventFilter(self)
+
+        self.mini_mode_window = MiniModeWindow(self.viewmodel, parent=self)
+        self.mini_mode_window.closed.connect(self._exit_mini_mode)
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -117,6 +121,10 @@ class MainWindow(QMainWindow):
 
         self._dark_theme_action.triggered.connect(lambda: self._set_theme(Theme.DARK))
         self._light_theme_action.triggered.connect(lambda: self._set_theme(Theme.LIGHT))
+
+        view_menu.addSeparator()
+        mini_mode_action = view_menu.addAction("Mini-mode")
+        mini_mode_action.triggered.connect(self._enter_mini_mode)
 
     def _apply_saved_or_system_theme(self) -> None:
         saved_theme = self._settings.get("theme")
@@ -175,7 +183,13 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def _toggle_fullscreen(self) -> None:
-        # TODO(US-101): define fullscreen behaviour when mini-mode is active
+        # Plein écran et mini-mode ne peuvent pas être actifs en même temps
+        # (US-101, résout le TODO laissé par US-082) : MainWindow est masquée
+        # pendant le mini-mode, donc son video_widget ne peut normalement pas
+        # recevoir de double-clic — ce garde-fou reste une sécurité explicite
+        # plutôt qu'un état ambigu implicite.
+        if self.mini_mode_window.isVisible():
+            return
         if self.isFullScreen():
             self.showNormal()
         else:
@@ -184,6 +198,20 @@ class MainWindow(QMainWindow):
     def _exit_fullscreen(self) -> None:
         if self.isFullScreen():
             self.showNormal()
+
+    def _enter_mini_mode(self) -> None:
+        # Décision explicite (résout le TODO(US-101) laissé par US-082) : le
+        # plein écran et le mini-mode sont incompatibles, on désactive donc le
+        # premier en priorité plutôt que de laisser un état ambigu.
+        self._exit_fullscreen()
+        self.viewmodel.set_video_output(self.mini_mode_window.video_widget)
+        self.hide()
+        self.mini_mode_window.show()
+
+    def _exit_mini_mode(self) -> None:
+        self.mini_mode_window.hide()
+        self.viewmodel.set_video_output(self.video_widget)
+        self.show()
 
     def _open_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
@@ -223,6 +251,12 @@ class MainWindow(QMainWindow):
         self._add_files_to_playlist(paths)
 
     def closeEvent(self, event) -> None:
+        # Fenêtre indépendante (always-on-top) : ne pas la laisser orpheline si
+        # MainWindow se ferme pendant que le mini-mode est actif. hide() plutôt
+        # que close() : mini_mode_window.closed déclenche _exit_mini_mode(), qui
+        # ré-afficherait MainWindow (self.show()) en pleine fermeture.
+        self.mini_mode_window.hide()
+
         # Cf. tests/test_player_engine.py : ramener à STOPPED avant destruction,
         # sinon le QMediaPlayer sous-jacent bloque indéfiniment (Qt 6.11 FFmpeg/macOS).
         self.viewmodel.stop()

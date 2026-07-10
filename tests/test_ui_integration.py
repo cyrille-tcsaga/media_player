@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 from core.models import MediaItem, PlaybackState
 from core.player_engine import PlayerEngine
 from ui.controls_widget import ControlsWidget
+from ui.main_window import MainWindow
 from viewmodels.player_viewmodel import PlayerViewModel
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "sample.mp3"
@@ -57,4 +58,25 @@ def test_click_next_advances_playlist_and_keeps_playing(qapp, qtbot):
     assert viewmodel.state == PlaybackState.PLAYING
 
     viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_mini_mode_action_updates_state_visible_from_main_window(qapp, qtbot, tmp_path):
+    # US-101 : MiniModeWindow et MainWindow s'abonnent au même PlayerViewModel
+    # (pas de PlayerEngine séparé) — une action côté mini-mode doit donc être
+    # immédiatement visible via le même viewmodel, sans câblage supplémentaire.
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+    )
+    qtbot.addWidget(window)
+    window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+
+    window._enter_mini_mode()
+
+    with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
+        qtbot.mouseClick(window.mini_mode_window.play_button, Qt.MouseButton.LeftButton)
+
+    assert window.viewmodel.state == PlaybackState.PLAYING
+
+    window.viewmodel.stop()
     qtbot.wait(200)
