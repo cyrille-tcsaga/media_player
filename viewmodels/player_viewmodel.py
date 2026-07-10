@@ -6,11 +6,15 @@ from core.player_engine import PlayerEngine
 
 class PlayerViewModel(QObject):
     state_changed = pyqtSignal(PlaybackState)
+    position_changed = pyqtSignal(int)
+    duration_changed = pyqtSignal(int)
 
     def __init__(self, engine: PlayerEngine | None = None) -> None:
         super().__init__()
         self._engine = engine if engine is not None else PlayerEngine()
         self._engine.state_changed.connect(self.state_changed)
+        self._engine.position_changed.connect(self.position_changed)
+        self._engine.duration_changed.connect(self.duration_changed)
 
     @property
     def state(self) -> PlaybackState:
@@ -30,3 +34,6 @@ class PlayerViewModel(QObject):
 
     def stop(self) -> None:
         self._engine.stop()
+
+    def set_position(self, position_ms: int) -> None:
+        self._engine.set_position(position_ms)
