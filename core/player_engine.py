@@ -31,6 +31,10 @@ class PlayerEngine(QObject):
     def load(self, media_item: MediaItem) -> None:
         self._player.setSource(QUrl.fromLocalFile(str(media_item.file_path)))
 
+    # Pas de type hint sur video_output : éviter d'importer un module widget dans core/.
+    def set_video_output(self, video_output) -> None:
+        self._player.setVideoOutput(video_output)
+
     def play(self) -> None:
         self._player.play()
 

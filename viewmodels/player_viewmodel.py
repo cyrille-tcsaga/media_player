@@ -19,6 +19,9 @@ class PlayerViewModel(QObject):
     def load(self, media_item: MediaItem) -> None:
         self._engine.load(media_item)
 
+    def set_video_output(self, video_output) -> None:
+        self._engine.set_video_output(video_output)
+
     def play(self) -> None:
         self._engine.play()
 
