@@ -1,19 +1,49 @@
 # Lecteur Média PyQt6
 
 ![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)
 
-Lecteur audio/vidéo local, mono-utilisateur, construit avec Python et PyQt6/QtMultimedia.
+Lecteur audio/vidéo local, mono-utilisateur, construit avec Python et PyQt6/QtMultimedia. Projet portfolio personnel — pas un concurrent de VLC : pas de streaming réseau, pas de transcodage, pas de plugins tiers.
 
-## Prérequis
+![Capture d'écran du lecteur avec une playlist en cours de lecture](docs/screenshots/main_window.png)
 
-- Python 3.11+ (testé avec Python 3.12)
+## Fonctionnalités (MVP)
 
-## Installation
+- Lecture de fichiers vidéo (MP4) et audio (MP3) : play / pause / stop
+- Barre de progression fidèle à la position de lecture, avec seek par clic/drag
+- Réglage du volume et mute/unmute
+- Playlist par glisser-déposer ou dialogue d'ouverture, navigation suivant/précédent, enchaînement automatique en fin de piste
+- Messages d'erreur clairs (fichier corrompu ou format non supporté), sans crash de l'application
+- Raccourcis clavier (espace, flèches gauche/droite pour le seek, haut/bas pour le volume)
+- Couverture de tests >= 70 % sur `core/`
+
+## Pour l'utilisateur final
+
+Aucun binaire précompilé n'est publié pour l'instant (pas de release CI) : voir la section [Packaging](#packaging) ci-dessous pour générer un exécutable autonome (`.exe` / `.app` / binaire Linux) qui ne nécessite pas d'installer Python.
+
+## Installation (développeur)
+
+Prérequis : Python 3.11+ (testé avec Python 3.12).
 
 ```bash
 python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+source venv/bin/activate      # Windows : venv\Scripts\activate
+pip install -r requirements.txt        # dépendances d'exécution (PyQt6, ...)
+pip install -r requirements-dev.txt    # dépendances de dev (pytest, ruff, PyInstaller...)
+```
+
+Lancer l'application :
+
+```bash
+python main.py
+```
+
+Lancer les tests et le lint :
+
+```bash
+pytest
+pytest --cov=core --cov-report=term-missing   # couverture sur core/
+ruff check .
 ```
 
 ## Packaging
@@ -40,4 +70,10 @@ L'exécutable est produit dans `dist/media_player/` :
 
 ## Documentation
 
-Voir `docs/PRD_Lecteur_Media_PyQt6.md` et `docs/USER_STORIES_Lecteur_Media_PyQt6.md` pour les spécifications et le backlog du projet.
+- [`docs/PRD_Lecteur_Media_PyQt6.md`](docs/PRD_Lecteur_Media_PyQt6.md) — spécification produit/technique du MVP
+- [`docs/USER_STORIES_Lecteur_Media_PyQt6.md`](docs/USER_STORIES_Lecteur_Media_PyQt6.md) — backlog détaillé, exécuté story par story
+- [`docs/PRD_V2_Lecteur_Media_PyQt6.md`](docs/PRD_V2_Lecteur_Media_PyQt6.md) — pistes d'évolution après le MVP (repeat/shuffle, thèmes, sous-titres, etc.)
+
+## Licence
+
+Ce projet est sous licence **GNU GPLv3** — voir [`LICENSE`](LICENSE). Ce choix découle directement de celui de PyQt6 (lui-même GPLv3 ou commercial) : un dépôt public sous GPLv3 est la façon la plus simple de rester en conformité, le code source étant de toute façon public.
