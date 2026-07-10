@@ -80,6 +80,7 @@ class MainWindow(QMainWindow):
         self.controls_widget.previous_requested.connect(self.viewmodel.previous_track)
         self.controls_widget.next_requested.connect(self.viewmodel.next_track)
         self.controls_widget.playback_rate_changed.connect(self.viewmodel.set_playback_rate)
+        self.controls_widget.repeat_mode_changed.connect(self.viewmodel.set_repeat_mode)
 
         self.viewmodel.position_changed.connect(self.progress_widget.set_position)
         self.viewmodel.duration_changed.connect(self.progress_widget.set_duration)

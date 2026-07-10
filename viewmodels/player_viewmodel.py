@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.models import MediaItem, PlaybackState
+from core.models import MediaItem, PlaybackState, RepeatMode
 from core.player_engine import PlayerEngine
 from core.playlist_manager import PlaylistManager
 
@@ -78,10 +78,18 @@ class PlayerViewModel(QObject):
     def _navigate(self, move, *, force_play: bool = False) -> None:
         previous_index = self._playlist.current_index
         media_item = move()
-        # PlaylistManager bloque aux bords (pas de bouclage) : si l'index n'a pas
-        # bougé, on est déjà en début/fin de playlist, donc on ne fait rien plutôt
-        # que de relancer le même morceau depuis le début.
-        if media_item is None or self._playlist.current_index == previous_index:
+        if media_item is None:
+            return
+        # PlaylistManager bloque aux bords en RepeatMode.NONE (pas de bouclage) :
+        # si l'index n'a pas bougé, on est déjà en début/fin de playlist, donc on
+        # ne fait rien plutôt que de relancer le même morceau depuis le début. En
+        # RepeatMode.TRACK, next()/previous() renvoient volontairement le même
+        # index à chaque appel (US-091) : ce n'est pas un blocage de bord, il faut
+        # bien recharger.
+        if (
+            self._playlist.repeat_mode != RepeatMode.TRACK
+            and self._playlist.current_index == previous_index
+        ):
             return
 
         # Choix explicite (non spécifié par le PRD) : si la lecture était en pause
@@ -122,6 +130,9 @@ class PlayerViewModel(QObject):
 
     def set_playback_rate(self, rate: float) -> None:
         self._engine.set_playback_rate(rate)
+
+    def set_repeat_mode(self, mode: RepeatMode) -> None:
+        self._playlist.set_repeat_mode(mode)
 
     def _on_position_changed(self, position_ms: int) -> None:
         self._position = position_ms

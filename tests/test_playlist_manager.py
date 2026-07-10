@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from core.models import MediaItem
+from core.models import MediaItem, RepeatMode
 from core.playlist_manager import PlaylistManager
 from core.playlist_persistence import load_playlist
 
@@ -122,3 +122,58 @@ def test_remove_saves_playlist_when_path_is_configured(tmp_path):
 
     saved = load_playlist(playlist_path)
     assert [item.display_name for item in saved] == ["b.mp3"]
+
+
+def test_default_repeat_mode_is_none():
+    manager = PlaylistManager()
+    assert manager.repeat_mode == RepeatMode.NONE
+
+
+def test_repeat_track_next_reloads_same_item_instead_of_advancing():
+    manager = PlaylistManager(repeat_mode=RepeatMode.TRACK)
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+
+    assert manager.next().display_name == "a.mp3"
+    assert manager.next().display_name == "a.mp3"
+    assert manager.current_index == 0
+
+
+def test_repeat_track_previous_stays_on_same_item():
+    manager = PlaylistManager(repeat_mode=RepeatMode.TRACK)
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+    manager.select(1)
+
+    assert manager.previous().display_name == "b.mp3"
+    assert manager.current_index == 1
+
+
+def test_repeat_playlist_next_wraps_to_first_item_at_end():
+    manager = PlaylistManager(repeat_mode=RepeatMode.PLAYLIST)
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+    manager.select(1)
+
+    assert manager.next().display_name == "a.mp3"
+    assert manager.current_index == 0
+
+
+def test_repeat_playlist_previous_wraps_to_last_item_at_start():
+    manager = PlaylistManager(repeat_mode=RepeatMode.PLAYLIST)
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+
+    assert manager.previous().display_name == "b.mp3"
+    assert manager.current_index == 1
+
+
+def test_set_repeat_mode_changes_mode_at_runtime():
+    manager = PlaylistManager()
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+    manager.select(1)
+
+    manager.set_repeat_mode(RepeatMode.PLAYLIST)
+
+    assert manager.next().display_name == "a.mp3"

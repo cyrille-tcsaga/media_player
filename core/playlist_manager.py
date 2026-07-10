@@ -1,14 +1,24 @@
 from pathlib import Path
 
-from core.models import MediaItem
+from core.models import MediaItem, RepeatMode
 from core.playlist_persistence import save_playlist
 
 
 class PlaylistManager:
-    def __init__(self, playlist_path: Path | None = None) -> None:
+    def __init__(
+        self, playlist_path: Path | None = None, repeat_mode: RepeatMode = RepeatMode.NONE
+    ) -> None:
         self._items: list[MediaItem] = []
         self._current_index: int | None = None
         self._playlist_path = playlist_path
+        self._repeat_mode = repeat_mode
+
+    @property
+    def repeat_mode(self) -> RepeatMode:
+        return self._repeat_mode
+
+    def set_repeat_mode(self, mode: RepeatMode) -> None:
+        self._repeat_mode = mode
 
     @property
     def items(self) -> list[MediaItem]:
@@ -53,18 +63,36 @@ class PlaylistManager:
         return self.current
 
     def next(self) -> MediaItem | None:
-        # Bloque au dernier élément pour le MVP : pas de bouclage (le mode répétition est V2/F13).
         if self._current_index is None:
             return None
+
+        if self._repeat_mode == RepeatMode.TRACK:
+            # Recharge le même élément au lieu d'avancer (F13 du PRD V2).
+            return self.current
+
         if self._current_index + 1 < len(self._items):
             self._current_index += 1
+        elif self._repeat_mode == RepeatMode.PLAYLIST:
+            self._current_index = 0
+        # RepeatMode.NONE : bloque au dernier élément, comportement V1 inchangé
+        # (pas de bouclage).
         return self.current
 
     def previous(self) -> MediaItem | None:
         if self._current_index is None:
             return None
+
+        if self._repeat_mode == RepeatMode.TRACK:
+            # Choix explicite (non spécifié par le PRD, par symétrie avec next()) :
+            # reste sur la piste courante plutôt que de reculer.
+            return self.current
+
         if self._current_index > 0:
             self._current_index -= 1
+        elif self._repeat_mode == RepeatMode.PLAYLIST:
+            self._current_index = len(self._items) - 1
+        # RepeatMode.NONE : bloque au premier élément, comportement V1 inchangé
+        # (pas de bouclage).
         return self.current
 
     def _save(self) -> None:

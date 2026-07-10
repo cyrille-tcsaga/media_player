@@ -1,8 +1,19 @@
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QWidget
 
+from core.models import RepeatMode
+
 PLAYBACK_RATE_STEPS = (0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_PLAYBACK_RATE = 1.0
+
+# Cycle affiché par le bouton "Répéter". Le libellé fait office d'icône
+# différenciée en l'absence d'un pipeline d'assets icônes dans ce projet.
+REPEAT_MODE_CYCLE = (RepeatMode.NONE, RepeatMode.TRACK, RepeatMode.PLAYLIST)
+REPEAT_MODE_LABELS = {
+    RepeatMode.NONE: "Répéter: Off",
+    RepeatMode.TRACK: "Répéter: 1",
+    RepeatMode.PLAYLIST: "Répéter: Tout",
+}
 
 
 class ControlsWidget(QWidget):
@@ -12,15 +23,19 @@ class ControlsWidget(QWidget):
     previous_requested = pyqtSignal()
     next_requested = pyqtSignal()
     playback_rate_changed = pyqtSignal(float)
+    repeat_mode_changed = pyqtSignal(RepeatMode)
 
     def __init__(self) -> None:
         super().__init__()
+
+        self._repeat_mode = RepeatMode.NONE
 
         self.previous_button = QPushButton("Précédent")
         self.play_button = QPushButton("Play")
         self.pause_button = QPushButton("Pause")
         self.stop_button = QPushButton("Stop")
         self.next_button = QPushButton("Suivant")
+        self.repeat_button = QPushButton(REPEAT_MODE_LABELS[self._repeat_mode])
 
         self.playback_rate_combo = QComboBox()
         for rate in PLAYBACK_RATE_STEPS:
@@ -33,6 +48,7 @@ class ControlsWidget(QWidget):
         self.stop_button.clicked.connect(self.stop_requested)
         self.next_button.clicked.connect(self.next_requested)
         self.playback_rate_combo.currentIndexChanged.connect(self._on_playback_rate_index_changed)
+        self.repeat_button.clicked.connect(self._cycle_repeat_mode)
 
         layout = QHBoxLayout(self)
         layout.addWidget(self.previous_button)
@@ -41,6 +57,13 @@ class ControlsWidget(QWidget):
         layout.addWidget(self.stop_button)
         layout.addWidget(self.next_button)
         layout.addWidget(self.playback_rate_combo)
+        layout.addWidget(self.repeat_button)
 
     def _on_playback_rate_index_changed(self, index: int) -> None:
         self.playback_rate_changed.emit(self.playback_rate_combo.itemData(index))
+
+    def _cycle_repeat_mode(self) -> None:
+        next_position = (REPEAT_MODE_CYCLE.index(self._repeat_mode) + 1) % len(REPEAT_MODE_CYCLE)
+        self._repeat_mode = REPEAT_MODE_CYCLE[next_position]
+        self.repeat_button.setText(REPEAT_MODE_LABELS[self._repeat_mode])
+        self.repeat_mode_changed.emit(self._repeat_mode)

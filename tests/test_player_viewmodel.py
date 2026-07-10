@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from core.models import MediaItem, PlaybackState
+from core.models import MediaItem, PlaybackState, RepeatMode
 from core.player_engine import PlayerEngine
 from viewmodels.player_viewmodel import PlayerViewModel
 
@@ -156,5 +156,46 @@ def test_media_finished_on_last_track_stops_without_looping(qapp, qtbot):
     # Cf. tests/test_player_engine.py : ramener explicitement à STOPPED avant
     # que le PlayerEngine sous-jacent ne sorte de portée (destruction pendant
     # PlayingState bloque indéfiniment sur ce backend).
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_next_track_reloads_same_track_when_repeat_mode_is_track(qapp, qtbot):
+    viewmodel = PlayerViewModel(PlayerEngine())
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+    viewmodel.set_repeat_mode(RepeatMode.TRACK)
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+
+    # RepeatMode.TRACK : next() renvoie volontairement le même index (US-091) ;
+    # _navigate() doit quand même recharger au lieu de traiter ça comme un
+    # blocage de bord de playlist (cf. le fix apporté dans cette story).
+    with qtbot.waitSignal(viewmodel.playlist_changed, timeout=1000):
+        viewmodel.next_track()
+
+    assert viewmodel.current_index == 0
+    assert viewmodel.state == PlaybackState.PLAYING
+
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_media_finished_restarts_same_track_when_repeat_mode_is_track(qapp, qtbot):
+    engine = PlayerEngine()
+    viewmodel = PlayerViewModel(engine)
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.set_repeat_mode(RepeatMode.TRACK)
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+
+    with qtbot.waitSignal(viewmodel.playlist_changed, timeout=1000):
+        engine.media_finished.emit()
+
+    assert viewmodel.current_index == 0
+    assert viewmodel.state == PlaybackState.PLAYING
+
     viewmodel.stop()
     qtbot.wait(200)
