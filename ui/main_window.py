@@ -94,6 +94,7 @@ class MainWindow(QMainWindow):
         self.progress_widget.seek_requested.connect(self.viewmodel.set_position)
 
         self.volume_widget.volume_changed.connect(self.viewmodel.set_volume)
+        self.volume_widget.volume_changed.connect(self._on_volume_changed)
 
         self.playlist_widget.item_activated.connect(self.viewmodel.play_at)
         self.playlist_widget.remove_requested.connect(self.viewmodel.remove_from_playlist)
@@ -112,6 +113,7 @@ class MainWindow(QMainWindow):
         self._build_shortcuts()
         self._restore_saved_playlist(playlist_path)
         self._apply_saved_or_system_theme()
+        self._restore_saved_volume()
 
     def _build_theme_menu(self) -> None:
         view_menu = self.menuBar().addMenu("Affichage")
@@ -143,6 +145,14 @@ class MainWindow(QMainWindow):
         self._light_theme_action.setChecked(theme == Theme.LIGHT)
         if persist:
             self._settings.set("theme", theme.value)
+
+    def _restore_saved_volume(self) -> None:
+        # setValue() déclenche VolumeWidget.volume_changed, donc applique aussi
+        # le volume restauré à PlayerEngine via self.viewmodel.set_volume.
+        self.volume_widget.slider.setValue(self._settings.get("volume"))
+
+    def _on_volume_changed(self, volume_percent: int) -> None:
+        self._settings.set("volume", volume_percent)
 
     def _restore_saved_playlist(self, playlist_path: Path) -> None:
         items, missing_count = load_playlist_with_missing_count(playlist_path)

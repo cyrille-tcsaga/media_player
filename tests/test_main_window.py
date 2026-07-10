@@ -343,3 +343,32 @@ def test_loading_valid_subtitles_does_not_show_status_bar_message(qapp, qtbot, t
     window.viewmodel.load_subtitles(srt_path)
 
     assert window.statusBar().currentMessage() == ""
+
+
+def test_changing_volume_persists_it_to_settings(qapp, qtbot, tmp_path):
+    settings_path = tmp_path / "settings.json"
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=settings_path,
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+
+    window.volume_widget.slider.setValue(42)
+
+    assert SettingsManager(settings_path).get("volume") == 42
+
+
+def test_startup_restores_previously_saved_volume(qapp, qtbot, tmp_path):
+    settings_path = tmp_path / "settings.json"
+    SettingsManager(settings_path).set("volume", 37)
+
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=settings_path,
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
+    qtbot.addWidget(window)
+
+    assert window.volume_widget.slider.value() == 37
+    assert window.viewmodel.volume == 37
