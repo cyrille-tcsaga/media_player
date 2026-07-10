@@ -14,7 +14,17 @@ DEFAULT_THUMBNAIL_CACHE_DIR = Path.home() / ".media_player" / "thumbnails"
 FFMPEG_TIMEOUT_SECONDS = 10
 THUMBNAIL_POSITION_RATIO = 0.10
 
+# Sous-ensemble vidéo de ui/main_window.py::MEDIA_EXTENSIONS. Dupliqué ici
+# (plutôt qu'importé depuis ui/main_window.py) pour que ui/playlist_widget.py
+# puisse l'utiliser sans créer d'import circulaire : main_window.py importe
+# déjà playlist_widget.py.
+VIDEO_EXTENSIONS = frozenset({".mp4", ".mkv", ".avi", ".mov", ".webm"})
+
 _DURATION_PATTERN = re.compile(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)")
+
+
+def is_video_file(path: Path) -> bool:
+    return path.suffix.lower() in VIDEO_EXTENSIONS
 
 
 def generate_thumbnail(media_item: MediaItem, cache_dir: Path) -> Path | None:

@@ -66,7 +66,9 @@ def test_mini_mode_action_updates_state_visible_from_main_window(qapp, qtbot, tm
     # (pas de PlayerEngine séparé) — une action côté mini-mode doit donc être
     # immédiatement visible via le même viewmodel, sans câblage supplémentaire.
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.viewmodel.load(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))

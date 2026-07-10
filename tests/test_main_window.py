@@ -31,7 +31,9 @@ def _drop_event(paths: list[Path]) -> QDropEvent:
 
 def test_drop_adds_files_and_starts_playback_when_idle(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
 
@@ -47,7 +49,9 @@ def test_drop_adds_files_and_starts_playback_when_idle(qapp, qtbot, tmp_path):
 
 def test_drop_adds_files_without_interrupting_current_playback(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
 
@@ -69,7 +73,9 @@ def test_drop_adds_files_without_interrupting_current_playback(qapp, qtbot, tmp_
 
 def test_drop_ignores_files_with_unrecognized_extension(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
 
@@ -81,7 +87,9 @@ def test_drop_ignores_files_with_unrecognized_extension(qapp, qtbot, tmp_path):
 
 def test_playback_error_shows_message_box(qapp, qtbot, monkeypatch, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
 
@@ -99,7 +107,11 @@ def test_startup_restores_playlist_from_disk(qapp, qtbot, tmp_path):
     playlist_path = tmp_path / "playlist.json"
     save_playlist([MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3")], playlist_path)
 
-    window = MainWindow(playlist_path=playlist_path, settings_path=tmp_path / "settings.json")
+    window = MainWindow(
+        playlist_path=playlist_path,
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     assert [item.display_name for item in window.viewmodel.playlist_items] == ["sample.mp3"]
@@ -117,7 +129,11 @@ def test_startup_shows_status_bar_message_when_files_are_missing(qapp, qtbot, tm
         playlist_path,
     )
 
-    window = MainWindow(playlist_path=playlist_path, settings_path=tmp_path / "settings.json")
+    window = MainWindow(
+        playlist_path=playlist_path,
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     assert [item.display_name for item in window.viewmodel.playlist_items] == ["sample.mp3"]
@@ -126,7 +142,11 @@ def test_startup_shows_status_bar_message_when_files_are_missing(qapp, qtbot, tm
 
 def test_adding_a_file_persists_playlist_to_disk(qapp, qtbot, tmp_path):
     playlist_path = tmp_path / "playlist.json"
-    window = MainWindow(playlist_path=playlist_path, settings_path=tmp_path / "settings.json")
+    window = MainWindow(
+        playlist_path=playlist_path,
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     with qtbot.waitSignal(window.viewmodel.state_changed, timeout=2000):
@@ -141,7 +161,9 @@ def test_adding_a_file_persists_playlist_to_disk(qapp, qtbot, tmp_path):
 
 def test_double_click_on_video_widget_toggles_fullscreen(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -155,7 +177,9 @@ def test_double_click_on_video_widget_toggles_fullscreen(qapp, qtbot, tmp_path):
 
 def test_exit_fullscreen_returns_to_normal_when_active(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -169,7 +193,9 @@ def test_exit_fullscreen_returns_to_normal_when_active(qapp, qtbot, tmp_path):
 
 def test_exit_fullscreen_is_noop_when_not_fullscreen(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -181,7 +207,11 @@ def test_exit_fullscreen_is_noop_when_not_fullscreen(qapp, qtbot, tmp_path):
 
 def test_selecting_light_theme_applies_it_and_persists_choice(qapp, qtbot, tmp_path):
     settings_path = tmp_path / "settings.json"
-    window = MainWindow(playlist_path=tmp_path / "playlist.json", settings_path=settings_path)
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=settings_path,
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     window._light_theme_action.trigger()
@@ -194,7 +224,11 @@ def test_startup_restores_previously_saved_theme(qapp, qtbot, tmp_path):
     settings_path = tmp_path / "settings.json"
     SettingsManager(settings_path).set("theme", "light")
 
-    window = MainWindow(playlist_path=tmp_path / "playlist.json", settings_path=settings_path)
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=settings_path,
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     assert qapp.styleSheet() == load_stylesheet(Theme.LIGHT)
@@ -206,7 +240,11 @@ def test_startup_without_saved_theme_uses_system_detection(qapp, qtbot, monkeypa
     monkeypatch.setattr(qapp.styleHints(), "colorScheme", lambda: Qt.ColorScheme.Light)
     settings_path = tmp_path / "settings.json"
 
-    window = MainWindow(playlist_path=tmp_path / "playlist.json", settings_path=settings_path)
+    window = MainWindow(
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=settings_path,
+        thumbnail_cache_dir=tmp_path / "thumbnails",
+    )
     qtbot.addWidget(window)
 
     assert qapp.styleSheet() == load_stylesheet(Theme.LIGHT)
@@ -217,7 +255,9 @@ def test_startup_without_saved_theme_uses_system_detection(qapp, qtbot, monkeypa
 
 def test_entering_mini_mode_hides_main_window_and_shows_mini_window(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -230,7 +270,9 @@ def test_entering_mini_mode_hides_main_window_and_shows_mini_window(qapp, qtbot,
 
 def test_closing_mini_mode_restores_main_window(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -244,7 +286,9 @@ def test_closing_mini_mode_restores_main_window(qapp, qtbot, tmp_path):
 
 def test_entering_mini_mode_exits_fullscreen_first(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()
@@ -258,7 +302,9 @@ def test_entering_mini_mode_exits_fullscreen_first(qapp, qtbot, tmp_path):
 
 def test_toggle_fullscreen_is_noop_while_mini_mode_active(qapp, qtbot, tmp_path):
     window = MainWindow(
-        playlist_path=tmp_path / "playlist.json", settings_path=tmp_path / "settings.json"
+        playlist_path=tmp_path / "playlist.json",
+        settings_path=tmp_path / "settings.json",
+        thumbnail_cache_dir=tmp_path / "thumbnails",
     )
     qtbot.addWidget(window)
     window.show()

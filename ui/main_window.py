@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from core.models import MediaItem, PlaybackState
 from core.playlist_persistence import DEFAULT_PLAYLIST_PATH, load_playlist_with_missing_count
 from core.settings_manager import DEFAULT_SETTINGS_PATH, SettingsManager
+from core.thumbnail_generator import DEFAULT_THUMBNAIL_CACHE_DIR
 from ui.controls_widget import ControlsWidget
 from ui.mini_mode_window import MiniModeWindow
 from ui.playlist_widget import PlaylistWidget
@@ -49,6 +50,7 @@ class MainWindow(QMainWindow):
         self,
         playlist_path: Path = DEFAULT_PLAYLIST_PATH,
         settings_path: Path = DEFAULT_SETTINGS_PATH,
+        thumbnail_cache_dir: Path = DEFAULT_THUMBNAIL_CACHE_DIR,
     ) -> None:
         super().__init__()
         self.setWindowTitle("Lecteur Média")
@@ -62,7 +64,7 @@ class MainWindow(QMainWindow):
         self.controls_widget = ControlsWidget()
         self.progress_widget = ProgressWidget()
         self.volume_widget = VolumeWidget()
-        self.playlist_widget = PlaylistWidget()
+        self.playlist_widget = PlaylistWidget(thumbnail_cache_dir=thumbnail_cache_dir)
         self.viewmodel.set_video_output(self.video_widget)
         self.video_widget.installEventFilter(self)
 
