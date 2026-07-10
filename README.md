@@ -1,5 +1,7 @@
 # Lecteur Média PyQt6
 
+![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+
 Lecteur audio/vidéo local, mono-utilisateur, construit avec Python et PyQt6/QtMultimedia.
 
 ## Prérequis
