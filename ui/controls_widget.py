@@ -24,6 +24,7 @@ class ControlsWidget(QWidget):
     next_requested = pyqtSignal()
     playback_rate_changed = pyqtSignal(float)
     repeat_mode_changed = pyqtSignal(RepeatMode)
+    shuffle_enabled_changed = pyqtSignal(bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -36,6 +37,8 @@ class ControlsWidget(QWidget):
         self.stop_button = QPushButton("Stop")
         self.next_button = QPushButton("Suivant")
         self.repeat_button = QPushButton(REPEAT_MODE_LABELS[self._repeat_mode])
+        self.shuffle_button = QPushButton("Aléatoire: Off")
+        self.shuffle_button.setCheckable(True)
 
         self.playback_rate_combo = QComboBox()
         for rate in PLAYBACK_RATE_STEPS:
@@ -49,6 +52,7 @@ class ControlsWidget(QWidget):
         self.next_button.clicked.connect(self.next_requested)
         self.playback_rate_combo.currentIndexChanged.connect(self._on_playback_rate_index_changed)
         self.repeat_button.clicked.connect(self._cycle_repeat_mode)
+        self.shuffle_button.toggled.connect(self._on_shuffle_toggled)
 
         layout = QHBoxLayout(self)
         layout.addWidget(self.previous_button)
@@ -58,6 +62,7 @@ class ControlsWidget(QWidget):
         layout.addWidget(self.next_button)
         layout.addWidget(self.playback_rate_combo)
         layout.addWidget(self.repeat_button)
+        layout.addWidget(self.shuffle_button)
 
     def _on_playback_rate_index_changed(self, index: int) -> None:
         self.playback_rate_changed.emit(self.playback_rate_combo.itemData(index))
@@ -67,3 +72,7 @@ class ControlsWidget(QWidget):
         self._repeat_mode = REPEAT_MODE_CYCLE[next_position]
         self.repeat_button.setText(REPEAT_MODE_LABELS[self._repeat_mode])
         self.repeat_mode_changed.emit(self._repeat_mode)
+
+    def _on_shuffle_toggled(self, checked: bool) -> None:
+        self.shuffle_button.setText(f"Aléatoire: {'On' if checked else 'Off'}")
+        self.shuffle_enabled_changed.emit(checked)

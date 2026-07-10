@@ -177,3 +177,88 @@ def test_set_repeat_mode_changes_mode_at_runtime():
     manager.set_repeat_mode(RepeatMode.PLAYLIST)
 
     assert manager.next().display_name == "a.mp3"
+
+
+def test_shuffle_disabled_by_default():
+    manager = PlaylistManager()
+    assert manager.shuffle_enabled is False
+
+
+def test_shuffle_next_visits_each_item_exactly_once_per_cycle():
+    names = ["a.mp3", "b.mp3", "c.mp3", "d.mp3", "e.mp3"]
+    manager = PlaylistManager()
+    for name in names:
+        manager.add(_item(name))
+
+    manager.set_shuffle_enabled(True)
+
+    visited = [manager.next().display_name for _ in range(len(names))]
+
+    assert sorted(visited) == sorted(names)
+    assert len(set(visited)) == len(names)
+
+
+def test_shuffle_order_is_computed_once_not_on_every_next_call(monkeypatch):
+    import core.playlist_manager as playlist_manager_module
+
+    manager = PlaylistManager()
+    for name in ("a.mp3", "b.mp3", "c.mp3"):
+        manager.add(_item(name))
+    manager.set_shuffle_enabled(True)
+
+    call_count = 0
+    original_shuffle = playlist_manager_module.random.shuffle
+
+    def counting_shuffle(seq):
+        nonlocal call_count
+        call_count += 1
+        original_shuffle(seq)
+
+    monkeypatch.setattr(playlist_manager_module.random, "shuffle", counting_shuffle)
+
+    for _ in range(3):
+        manager.next()
+
+    assert call_count == 0
+
+
+def test_disabling_shuffle_restores_linear_navigation():
+    manager = PlaylistManager()
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+    manager.add(_item("c.mp3"))
+
+    manager.set_shuffle_enabled(True)
+    manager.set_shuffle_enabled(False)
+
+    assert manager.next().display_name == "b.mp3"
+    assert manager.next().display_name == "c.mp3"
+    assert manager.next().display_name == "c.mp3"
+
+
+def test_shuffle_with_repeat_playlist_reshuffles_on_new_cycle():
+    names = ["a.mp3", "b.mp3", "c.mp3"]
+    manager = PlaylistManager(repeat_mode=RepeatMode.PLAYLIST)
+    for name in names:
+        manager.add(_item(name))
+    manager.set_shuffle_enabled(True)
+
+    first_cycle = [manager.next().display_name for _ in range(len(names))]
+    assert sorted(first_cycle) == sorted(names)
+
+    # Un appel de plus doit boucler (RepeatMode.PLAYLIST) sur un nouveau tirage
+    # plutôt que de bloquer (comportement NONE) ou planter.
+    fourth = manager.next()
+    assert fourth is not None
+    assert fourth.display_name in names
+
+
+def test_shuffle_with_repeat_track_ignores_shuffle_and_reloads_same_item():
+    manager = PlaylistManager(repeat_mode=RepeatMode.TRACK)
+    manager.add(_item("a.mp3"))
+    manager.add(_item("b.mp3"))
+    manager.set_shuffle_enabled(True)
+
+    assert manager.next().display_name == "a.mp3"
+    assert manager.next().display_name == "a.mp3"
+    assert manager.current_index == 0

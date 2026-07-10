@@ -22,3 +22,21 @@ def test_repeat_button_cycles_through_modes_and_emits_signal(qapp, qtbot):
         controls.repeat_button.click()
     assert blocker.args == [RepeatMode.NONE]
     assert controls.repeat_button.text() == "Répéter: Off"
+
+
+def test_shuffle_button_toggles_and_emits_signal(qapp, qtbot):
+    controls = ControlsWidget()
+    qtbot.addWidget(controls)
+
+    assert controls.shuffle_button.text() == "Aléatoire: Off"
+    assert not controls.shuffle_button.isChecked()
+
+    with qtbot.waitSignal(controls.shuffle_enabled_changed) as blocker:
+        controls.shuffle_button.click()
+    assert blocker.args == [True]
+    assert controls.shuffle_button.text() == "Aléatoire: On"
+
+    with qtbot.waitSignal(controls.shuffle_enabled_changed) as blocker:
+        controls.shuffle_button.click()
+    assert blocker.args == [False]
+    assert controls.shuffle_button.text() == "Aléatoire: Off"

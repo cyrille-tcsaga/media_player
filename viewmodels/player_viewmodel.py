@@ -134,6 +134,9 @@ class PlayerViewModel(QObject):
     def set_repeat_mode(self, mode: RepeatMode) -> None:
         self._playlist.set_repeat_mode(mode)
 
+    def set_shuffle_enabled(self, enabled: bool) -> None:
+        self._playlist.set_shuffle_enabled(enabled)
+
     def _on_position_changed(self, position_ms: int) -> None:
         self._position = position_ms
         self.position_changed.emit(position_ms)
