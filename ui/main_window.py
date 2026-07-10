@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QVBoxLayout,
 
 from core.models import MediaItem
 from ui.controls_widget import ControlsWidget
+from ui.progress_widget import ProgressWidget
 from ui.video_widget import VideoWidget
 from viewmodels.player_viewmodel import PlayerViewModel
 
@@ -23,17 +24,23 @@ class MainWindow(QMainWindow):
 
         self.video_widget = VideoWidget()
         self.controls_widget = ControlsWidget()
+        self.progress_widget = ProgressWidget()
         self.viewmodel.set_video_output(self.video_widget)
 
         central = QWidget()
         layout = QVBoxLayout(central)
         layout.addWidget(self.video_widget)
+        layout.addWidget(self.progress_widget)
         layout.addWidget(self.controls_widget)
         self.setCentralWidget(central)
 
         self.controls_widget.play_requested.connect(self.viewmodel.play)
         self.controls_widget.pause_requested.connect(self.viewmodel.pause)
         self.controls_widget.stop_requested.connect(self.viewmodel.stop)
+
+        self.viewmodel.position_changed.connect(self.progress_widget.set_position)
+        self.viewmodel.duration_changed.connect(self.progress_widget.set_duration)
+        self.progress_widget.seek_requested.connect(self.viewmodel.set_position)
 
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")
