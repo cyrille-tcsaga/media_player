@@ -19,6 +19,9 @@ _QT_ERROR_TO_MESSAGE = {
 }
 _DEFAULT_ERROR_MESSAGE = "Une erreur inattendue est survenue pendant la lecture."
 
+MIN_PLAYBACK_RATE = 0.5
+MAX_PLAYBACK_RATE = 2.0
+
 
 class PlayerEngine(QObject):
     state_changed = pyqtSignal(PlaybackState)
@@ -75,6 +78,18 @@ class PlayerEngine(QObject):
 
     def set_volume(self, volume: float) -> None:
         self._audio_output.setVolume(volume)
+
+    @property
+    def playback_rate(self) -> float:
+        return self._player.playbackRate()
+
+    def set_playback_rate(self, rate: float) -> None:
+        # Choix explicite : on clampe plutôt que de rejeter une valeur hors
+        # plage (0.5x-2.0x, cf. F18 du PRD V2), pour qu'un contrôle UI à bornes
+        # ne puisse jamais lever d'exception ni laisser le lecteur dans un état
+        # incohérent.
+        clamped_rate = max(MIN_PLAYBACK_RATE, min(MAX_PLAYBACK_RATE, rate))
+        self._player.setPlaybackRate(clamped_rate)
 
     def _on_playback_state_changed(self, qt_state: QMediaPlayer.PlaybackState) -> None:
         self._state = _QT_STATE_TO_PLAYBACK_STATE.get(qt_state, self._state)

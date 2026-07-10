@@ -120,6 +120,9 @@ class PlayerViewModel(QObject):
     def set_volume(self, volume_percent: int) -> None:
         self._engine.set_volume(volume_percent / 100)
 
+    def set_playback_rate(self, rate: float) -> None:
+        self._engine.set_playback_rate(rate)
+
     def _on_position_changed(self, position_ms: int) -> None:
         self._position = position_ms
         self.position_changed.emit(position_ms)

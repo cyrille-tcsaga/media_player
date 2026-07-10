@@ -65,6 +65,24 @@ def test_set_volume_updates_volume_property(qapp):
     assert engine.volume == 0.5
 
 
+def test_set_playback_rate_updates_playback_rate_property(qapp):
+    engine = PlayerEngine()
+
+    engine.set_playback_rate(1.5)
+
+    assert engine.playback_rate == 1.5
+
+
+def test_set_playback_rate_clamps_out_of_range_values(qapp):
+    engine = PlayerEngine()
+
+    engine.set_playback_rate(10.0)
+    assert engine.playback_rate == 2.0
+
+    engine.set_playback_rate(0.1)
+    assert engine.playback_rate == 0.5
+
+
 def test_load_nonexistent_file_emits_error_and_returns_to_stopped(qapp, qtbot):
     missing_path = Path(__file__).parent / "fixtures" / "does_not_exist.mp3"
     engine = PlayerEngine()
