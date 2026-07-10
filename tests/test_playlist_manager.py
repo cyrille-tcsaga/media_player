@@ -2,6 +2,7 @@ from pathlib import Path
 
 from core.models import MediaItem
 from core.playlist_manager import PlaylistManager
+from core.playlist_persistence import load_playlist
 
 
 def _item(name: str) -> MediaItem:
@@ -96,3 +97,28 @@ def test_remove_invalid_index_is_noop():
     manager.add(_item("a.mp3"))
     manager.remove(5)
     assert len(manager.items) == 1
+
+
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "sample.mp3"
+
+
+def test_add_saves_playlist_when_path_is_configured(tmp_path):
+    playlist_path = tmp_path / "playlist.json"
+    manager = PlaylistManager(playlist_path=playlist_path)
+
+    manager.add(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+
+    saved = load_playlist(playlist_path)
+    assert [item.display_name for item in saved] == ["a.mp3"]
+
+
+def test_remove_saves_playlist_when_path_is_configured(tmp_path):
+    playlist_path = tmp_path / "playlist.json"
+    manager = PlaylistManager(playlist_path=playlist_path)
+    manager.add(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    manager.add(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+
+    manager.remove(0)
+
+    saved = load_playlist(playlist_path)
+    assert [item.display_name for item in saved] == ["b.mp3"]

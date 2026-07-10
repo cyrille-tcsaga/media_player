@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.models import MediaItem, PlaybackState
+from core.playlist_persistence import DEFAULT_PLAYLIST_PATH, load_playlist_with_missing_count
 from ui.controls_widget import ControlsWidget
 from ui.playlist_widget import PlaylistWidget
 from ui.progress_widget import ProgressWidget
@@ -41,13 +42,13 @@ MEDIA_FILE_FILTER = (
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, playlist_path: Path = DEFAULT_PLAYLIST_PATH) -> None:
         super().__init__()
         self.setWindowTitle("Lecteur Média")
         self.resize(900, 600)
         self.setAcceptDrops(True)
 
-        self.viewmodel = PlayerViewModel()
+        self.viewmodel = PlayerViewModel(playlist_path=playlist_path)
 
         self.video_widget = VideoWidget()
         self.controls_widget = ControlsWidget()
@@ -87,6 +88,18 @@ class MainWindow(QMainWindow):
         open_action.triggered.connect(self._open_file)
 
         self._build_shortcuts()
+        self._restore_saved_playlist(playlist_path)
+
+    def _restore_saved_playlist(self, playlist_path: Path) -> None:
+        items, missing_count = load_playlist_with_missing_count(playlist_path)
+        for item in items:
+            self.viewmodel.add_to_playlist(item)
+        if missing_count:
+            self.statusBar().showMessage(
+                f"{missing_count} fichier(s) de la précédente playlist introuvable(s) "
+                "et ignoré(s).",
+                5000,
+            )
 
     def _build_shortcuts(self) -> None:
         QShortcut(QKeySequence(Qt.Key.Key_Space), self, self._toggle_play_pause)

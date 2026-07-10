@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.models import MediaItem, PlaybackState
@@ -12,10 +14,12 @@ class PlayerViewModel(QObject):
     playlist_changed = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, engine: PlayerEngine | None = None) -> None:
+    def __init__(
+        self, engine: PlayerEngine | None = None, playlist_path: Path | None = None
+    ) -> None:
         super().__init__()
         self._engine = engine if engine is not None else PlayerEngine()
-        self._playlist = PlaylistManager()
+        self._playlist = PlaylistManager(playlist_path=playlist_path)
         self._position = 0
         self._duration = 0
 

@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from core.models import MediaItem
+from core.playlist_persistence import save_playlist
 
 
 class PlaylistManager:
-    def __init__(self) -> None:
+    def __init__(self, playlist_path: Path | None = None) -> None:
         self._items: list[MediaItem] = []
         self._current_index: int | None = None
+        self._playlist_path = playlist_path
 
     @property
     def items(self) -> list[MediaItem]:
@@ -24,6 +28,7 @@ class PlaylistManager:
         self._items.append(media_item)
         if self._current_index is None:
             self._current_index = 0
+        self._save()
 
     def remove(self, index: int) -> None:
         if not (0 <= index < len(self._items)):
@@ -38,6 +43,8 @@ class PlaylistManager:
                 self._current_index -= 1
             elif index == self._current_index:
                 self._current_index = min(self._current_index, len(self._items) - 1)
+
+        self._save()
 
     def select(self, index: int) -> MediaItem | None:
         if not (0 <= index < len(self._items)):
@@ -59,3 +66,7 @@ class PlaylistManager:
         if self._current_index > 0:
             self._current_index -= 1
         return self.current
+
+    def _save(self) -> None:
+        if self._playlist_path is not None:
+            save_playlist(self._items, self._playlist_path)
