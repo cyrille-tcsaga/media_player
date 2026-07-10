@@ -21,6 +21,7 @@ class PlayerViewModel(QObject):
         self._engine.state_changed.connect(self.state_changed)
         self._engine.position_changed.connect(self._on_position_changed)
         self._engine.duration_changed.connect(self._on_duration_changed)
+        self._engine.media_finished.connect(self._on_media_finished)
 
     @property
     def state(self) -> PlaybackState:
@@ -68,7 +69,7 @@ class PlayerViewModel(QObject):
     def previous_track(self) -> None:
         self._navigate(self._playlist.previous)
 
-    def _navigate(self, move) -> None:
+    def _navigate(self, move, *, force_play: bool = False) -> None:
         previous_index = self._playlist.current_index
         media_item = move()
         # PlaylistManager bloque aux bords (pas de bouclage) : si l'index n'a pas
@@ -80,12 +81,17 @@ class PlayerViewModel(QObject):
         # Choix explicite (non spécifié par le PRD) : si la lecture était en pause
         # (ou stoppée), changer de piste la charge sans relancer la lecture — sinon
         # on reprend automatiquement, pour ne pas surprendre l'utilisateur en train
-        # d'écouter.
-        was_playing = self.state == PlaybackState.PLAYING
+        # d'écouter. force_play=True court-circuite ce choix pour l'enchaînement
+        # automatique en fin de piste (_on_media_finished), où l'on veut toujours
+        # continuer la lecture.
+        was_playing = force_play or self.state == PlaybackState.PLAYING
         self.load(media_item)
         if was_playing:
             self.play()
         self.playlist_changed.emit()
+
+    def _on_media_finished(self) -> None:
+        self._navigate(self._playlist.next, force_play=True)
 
     def load(self, media_item: MediaItem) -> None:
         self._engine.load(media_item)

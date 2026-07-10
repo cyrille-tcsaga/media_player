@@ -113,3 +113,48 @@ def test_next_track_on_empty_playlist_is_noop(qapp):
 
     assert viewmodel.current_index is None
     assert viewmodel.state == PlaybackState.STOPPED
+
+
+def test_media_finished_auto_advances_to_next_track(qapp, qtbot):
+    # On simule directement le signal PlayerEngine.media_finished plutôt que
+    # d'attendre la fin réelle des ~2s du fixture : laisser tourner une boucle
+    # d'événements imbriquée pendant plusieurs secondes de décodage réel bloque
+    # indéfiniment ce backend Qt 6.11 FFmpeg (même famille que les autres
+    # blocages déjà documentés dans ce fichier et player_engine.py).
+    engine = PlayerEngine()
+    viewmodel = PlayerViewModel(engine)
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+
+    with qtbot.waitSignal(viewmodel.playlist_changed, timeout=1000):
+        engine.media_finished.emit()
+
+    assert viewmodel.current_index == 1
+    assert viewmodel.state == PlaybackState.PLAYING
+
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_media_finished_on_last_track_stops_without_looping(qapp, qtbot):
+    engine = PlayerEngine()
+    viewmodel = PlayerViewModel(engine)
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+
+    # Dernier (et unique) morceau : pas de bouclage (cohérent avec US-040), donc
+    # aucun rechargement ni relance de lecture ne doit se produire ici.
+    engine.media_finished.emit()
+
+    assert viewmodel.current_index == 0
+
+    # Cf. tests/test_player_engine.py : ramener explicitement à STOPPED avant
+    # que le PlayerEngine sous-jacent ne sorte de portée (destruction pendant
+    # PlayingState bloque indéfiniment sur ce backend).
+    viewmodel.stop()
+    qtbot.wait(200)

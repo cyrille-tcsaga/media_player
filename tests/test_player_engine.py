@@ -21,3 +21,16 @@ def test_load_then_play_sets_state_to_playing(qapp, qtbot):
     # traiter la transition avant que l'objet ne sorte de portée.
     engine.stop()
     qtbot.wait(200)
+
+
+def test_media_finished_emitted_at_end_of_track(qapp, qtbot):
+    engine = PlayerEngine()
+    engine.load(MediaItem(file_path=FIXTURE_PATH, display_name="sample.mp3"))
+
+    # Le fixture dure ~2s : on attend la fin réelle de la lecture pour vérifier
+    # le câblage mediaStatusChanged -> media_finished bout en bout.
+    with qtbot.waitSignal(engine.media_finished, timeout=5000):
+        engine.play()
+
+    engine.stop()
+    qtbot.wait(200)

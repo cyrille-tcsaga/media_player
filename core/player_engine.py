@@ -14,6 +14,7 @@ class PlayerEngine(QObject):
     state_changed = pyqtSignal(PlaybackState)
     position_changed = pyqtSignal(int)
     duration_changed = pyqtSignal(int)
+    media_finished = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -27,6 +28,7 @@ class PlayerEngine(QObject):
         self._player.errorOccurred.connect(self._on_error)
         self._player.positionChanged.connect(self._on_position_changed)
         self._player.durationChanged.connect(self._on_duration_changed)
+        self._player.mediaStatusChanged.connect(self._on_media_status_changed)
 
     @property
     def state(self) -> PlaybackState:
@@ -76,3 +78,7 @@ class PlayerEngine(QObject):
 
     def _on_duration_changed(self, duration_ms: int) -> None:
         self.duration_changed.emit(int(duration_ms))
+
+    def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self.media_finished.emit()
