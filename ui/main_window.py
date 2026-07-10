@@ -2,4 +2,7 @@ from PyQt6.QtWidgets import QMainWindow
 
 
 class MainWindow(QMainWindow):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("Lecteur Média")
+        self.resize(900, 600)
