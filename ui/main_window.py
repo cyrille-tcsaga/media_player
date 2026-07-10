@@ -1,13 +1,18 @@
 from pathlib import Path
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QVBoxLayout, QWidget
 
-from core.models import MediaItem
+from core.models import MediaItem, PlaybackState
 from ui.controls_widget import ControlsWidget
 from ui.progress_widget import ProgressWidget
 from ui.video_widget import VideoWidget
 from ui.volume_widget import VolumeWidget
 from viewmodels.player_viewmodel import PlayerViewModel
+
+SEEK_STEP_MS = 5_000
+VOLUME_STEP_PERCENT = 5
 
 MEDIA_FILE_FILTER = (
     "Fichiers média (*.mp4 *.mkv *.avi *.mov *.webm *.mp3 *.wav *.flac *.ogg *.m4a);;"
@@ -50,6 +55,34 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu("Fichier")
         open_action = file_menu.addAction("Ouvrir un fichier")
         open_action.triggered.connect(self._open_file)
+
+        self._build_shortcuts()
+
+    def _build_shortcuts(self) -> None:
+        QShortcut(QKeySequence(Qt.Key.Key_Space), self, self._toggle_play_pause)
+        QShortcut(QKeySequence(Qt.Key.Key_Right), self, lambda: self._seek_relative(SEEK_STEP_MS))
+        QShortcut(QKeySequence(Qt.Key.Key_Left), self, lambda: self._seek_relative(-SEEK_STEP_MS))
+        QShortcut(
+            QKeySequence(Qt.Key.Key_Up), self, lambda: self._change_volume(VOLUME_STEP_PERCENT)
+        )
+        QShortcut(
+            QKeySequence(Qt.Key.Key_Down), self, lambda: self._change_volume(-VOLUME_STEP_PERCENT)
+        )
+
+    def _toggle_play_pause(self) -> None:
+        if self.viewmodel.state == PlaybackState.PLAYING:
+            self.viewmodel.pause()
+        else:
+            self.viewmodel.play()
+
+    def _seek_relative(self, offset_ms: int) -> None:
+        new_position = max(0, min(self.viewmodel.duration, self.viewmodel.position + offset_ms))
+        self.viewmodel.set_position(new_position)
+        self.progress_widget.set_position(new_position)
+
+    def _change_volume(self, offset_percent: int) -> None:
+        new_volume = max(0, min(100, self.volume_widget.slider.value() + offset_percent))
+        self.volume_widget.slider.setValue(new_volume)
 
     def _open_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
