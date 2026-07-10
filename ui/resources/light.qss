@@ -1,0 +1,54 @@
+QWidget {
+    background-color: #f5f5f5;
+    color: #1a1a1a;
+}
+
+QMainWindow, QStatusBar, QMenuBar {
+    background-color: #f5f5f5;
+    color: #1a1a1a;
+}
+
+QMenuBar::item:selected, QMenu::item:selected {
+    background-color: #d8d8d8;
+}
+
+QPushButton, QComboBox {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #bbbbbb;
+    padding: 4px 8px;
+}
+
+QPushButton:hover, QComboBox:hover {
+    background-color: #ececec;
+}
+
+QPushButton:pressed {
+    background-color: #dddddd;
+}
+
+QListWidget {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #cccccc;
+}
+
+QListWidget::item:selected {
+    background-color: #d8d8d8;
+}
+
+QSlider::groove:horizontal {
+    background: #cccccc;
+    height: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: #d1481f;
+    width: 12px;
+    margin: -5px 0;
+    border-radius: 6px;
+}
+
+QLabel {
+    color: #1a1a1a;
+}

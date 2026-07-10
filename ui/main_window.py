@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QActionGroup, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -13,9 +13,11 @@ from PyQt6.QtWidgets import (
 
 from core.models import MediaItem, PlaybackState
 from core.playlist_persistence import DEFAULT_PLAYLIST_PATH, load_playlist_with_missing_count
+from core.settings_manager import DEFAULT_SETTINGS_PATH, SettingsManager
 from ui.controls_widget import ControlsWidget
 from ui.playlist_widget import PlaylistWidget
 from ui.progress_widget import ProgressWidget
+from ui.theme_manager import Theme, apply_theme, detect_system_theme
 from ui.video_widget import VideoWidget
 from ui.volume_widget import VolumeWidget
 from viewmodels.player_viewmodel import PlayerViewModel
@@ -42,13 +44,18 @@ MEDIA_FILE_FILTER = (
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, playlist_path: Path = DEFAULT_PLAYLIST_PATH) -> None:
+    def __init__(
+        self,
+        playlist_path: Path = DEFAULT_PLAYLIST_PATH,
+        settings_path: Path = DEFAULT_SETTINGS_PATH,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("Lecteur Média")
         self.resize(900, 600)
         self.setAcceptDrops(True)
 
         self.viewmodel = PlayerViewModel(playlist_path=playlist_path)
+        self._settings = SettingsManager(settings_path=settings_path)
 
         self.video_widget = VideoWidget()
         self.controls_widget = ControlsWidget()
@@ -89,8 +96,37 @@ class MainWindow(QMainWindow):
         open_action = file_menu.addAction("Ouvrir un fichier")
         open_action.triggered.connect(self._open_file)
 
+        self._build_theme_menu()
         self._build_shortcuts()
         self._restore_saved_playlist(playlist_path)
+        self._apply_saved_or_system_theme()
+
+    def _build_theme_menu(self) -> None:
+        view_menu = self.menuBar().addMenu("Affichage")
+        self._dark_theme_action = view_menu.addAction("Thème sombre")
+        self._dark_theme_action.setCheckable(True)
+        self._light_theme_action = view_menu.addAction("Thème clair")
+        self._light_theme_action.setCheckable(True)
+
+        theme_group = QActionGroup(self)
+        theme_group.setExclusive(True)
+        theme_group.addAction(self._dark_theme_action)
+        theme_group.addAction(self._light_theme_action)
+
+        self._dark_theme_action.triggered.connect(lambda: self._set_theme(Theme.DARK))
+        self._light_theme_action.triggered.connect(lambda: self._set_theme(Theme.LIGHT))
+
+    def _apply_saved_or_system_theme(self) -> None:
+        saved_theme = self._settings.get("theme")
+        theme = Theme(saved_theme) if saved_theme is not None else detect_system_theme()
+        self._set_theme(theme, persist=False)
+
+    def _set_theme(self, theme: Theme, *, persist: bool = True) -> None:
+        apply_theme(QApplication.instance(), theme)
+        self._dark_theme_action.setChecked(theme == Theme.DARK)
+        self._light_theme_action.setChecked(theme == Theme.LIGHT)
+        if persist:
+            self._settings.set("theme", theme.value)
 
     def _restore_saved_playlist(self, playlist_path: Path) -> None:
         items, missing_count = load_playlist_with_missing_count(playlist_path)
