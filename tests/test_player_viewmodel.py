@@ -33,3 +33,83 @@ def test_play_at_invalid_index_is_noop(qapp):
     viewmodel.play_at(0)
 
     assert viewmodel.state == PlaybackState.STOPPED
+
+
+def test_next_track_resumes_playback_when_was_playing(qapp, qtbot):
+    viewmodel = PlayerViewModel(PlayerEngine())
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+
+    # Cf. tests/test_player_engine.py : qtbot.waitUntil() (busy-poll via
+    # QTest.qWait) bloque indéfiniment avec ce backend Qt 6.11 FFmpeg pendant
+    # une lecture en cours — on utilise waitSignal comme partout ailleurs.
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.next_track()
+
+    assert viewmodel.current_index == 1
+    assert viewmodel.state == PlaybackState.PLAYING
+
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_next_track_does_not_resume_playback_when_was_paused(qapp, qtbot):
+    viewmodel = PlayerViewModel(PlayerEngine())
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(0)
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.pause()
+
+    # load() appelle stop() avant de changer de source (cf. player_engine.py),
+    # ce qui émet déjà state_changed : pas besoin de relancer play().
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.next_track()
+
+    assert viewmodel.current_index == 1
+    assert viewmodel.state != PlaybackState.PLAYING
+
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_next_track_at_last_item_is_noop(qapp, qtbot):
+    viewmodel = PlayerViewModel(PlayerEngine())
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="b.mp3"))
+
+    with qtbot.waitSignal(viewmodel.state_changed, timeout=2000):
+        viewmodel.play_at(1)
+
+    viewmodel.next_track()
+    qtbot.wait(200)
+
+    assert viewmodel.current_index == 1
+    assert viewmodel.state == PlaybackState.PLAYING
+
+    viewmodel.stop()
+    qtbot.wait(200)
+
+
+def test_previous_track_at_first_item_is_noop(qapp):
+    viewmodel = PlayerViewModel(PlayerEngine())
+    viewmodel.add_to_playlist(MediaItem(file_path=FIXTURE_PATH, display_name="a.mp3"))
+
+    viewmodel.previous_track()
+
+    assert viewmodel.current_index == 0
+    assert viewmodel.state == PlaybackState.STOPPED
+
+
+def test_next_track_on_empty_playlist_is_noop(qapp):
+    viewmodel = PlayerViewModel(PlayerEngine())
+
+    viewmodel.next_track()
+
+    assert viewmodel.current_index is None
+    assert viewmodel.state == PlaybackState.STOPPED

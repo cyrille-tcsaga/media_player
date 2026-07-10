@@ -62,6 +62,31 @@ class PlayerViewModel(QObject):
         self.play()
         self.playlist_changed.emit()
 
+    def next_track(self) -> None:
+        self._navigate(self._playlist.next)
+
+    def previous_track(self) -> None:
+        self._navigate(self._playlist.previous)
+
+    def _navigate(self, move) -> None:
+        previous_index = self._playlist.current_index
+        media_item = move()
+        # PlaylistManager bloque aux bords (pas de bouclage) : si l'index n'a pas
+        # bougé, on est déjà en début/fin de playlist, donc on ne fait rien plutôt
+        # que de relancer le même morceau depuis le début.
+        if media_item is None or self._playlist.current_index == previous_index:
+            return
+
+        # Choix explicite (non spécifié par le PRD) : si la lecture était en pause
+        # (ou stoppée), changer de piste la charge sans relancer la lecture — sinon
+        # on reprend automatiquement, pour ne pas surprendre l'utilisateur en train
+        # d'écouter.
+        was_playing = self.state == PlaybackState.PLAYING
+        self.load(media_item)
+        if was_playing:
+            self.play()
+        self.playlist_changed.emit()
+
     def load(self, media_item: MediaItem) -> None:
         self._engine.load(media_item)
 

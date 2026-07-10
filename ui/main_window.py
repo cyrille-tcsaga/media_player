@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         layout = QVBoxLayout(central)
-        layout.addWidget(self.video_widget)
+        layout.addWidget(self.video_widget, stretch=1)
         layout.addWidget(self.progress_widget)
         layout.addWidget(self.controls_widget)
         layout.addWidget(self.volume_widget)
@@ -48,6 +48,8 @@ class MainWindow(QMainWindow):
         self.controls_widget.play_requested.connect(self.viewmodel.play)
         self.controls_widget.pause_requested.connect(self.viewmodel.pause)
         self.controls_widget.stop_requested.connect(self.viewmodel.stop)
+        self.controls_widget.previous_requested.connect(self.viewmodel.previous_track)
+        self.controls_widget.next_requested.connect(self.viewmodel.next_track)
 
         self.viewmodel.position_changed.connect(self.progress_widget.set_position)
         self.viewmodel.duration_changed.connect(self.progress_widget.set_duration)

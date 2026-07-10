@@ -33,6 +33,11 @@ class PlayerEngine(QObject):
         return self._state
 
     def load(self, media_item: MediaItem) -> None:
+        # Appeler setSource() pendant PlayingState bloque indéfiniment sur ce
+        # backend (Qt 6.11 FFmpeg) — même famille de bug que le closeEvent
+        # documenté dans main_window.py. On stoppe explicitement avant de
+        # changer de source (utile pour next/previous pendant la lecture).
+        self._player.stop()
         self._player.setSource(QUrl.fromLocalFile(str(media_item.file_path)))
 
     # Pas de type hint sur video_output : éviter d'importer un module widget dans core/.
