@@ -15,3 +15,9 @@ class PlaybackState(Enum):
     PLAYING = auto()
     PAUSED = auto()
     ERROR = auto()
+
+
+class RepeatMode(Enum):
+    NONE = auto()
+    TRACK = auto()
+    PLAYLIST = auto()
