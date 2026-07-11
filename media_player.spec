@@ -34,7 +34,13 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=binaries,
-    datas=[],
+    # ui/resources/*.qss (US-083) ne sont pas du code Python : PyInstaller ne
+    # les embarque pas automatiquement via l'analyse des imports, il faut les
+    # déclarer explicitement ici. Chemin de destination identique au chemin
+    # source pour que ui/theme_manager.py::RESOURCES_DIR (Path(__file__).parent
+    # / "resources", relatif à ui/theme_manager.py) résolve correctement une
+    # fois packagé.
+    datas=[('ui/resources', 'ui/resources')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
